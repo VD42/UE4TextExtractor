@@ -78,20 +78,13 @@ std::optional<FText> try_read_blueprint_text(std::vector<char> const& buffer, si
 					return std::nullopt;
 				const auto ch2 = buffer[index + 1];
 				const auto ch = static_cast<char16_t>(ch1) + static_cast<char16_t>(ch2) * 255;
-				if (!good_ch(ch))
-					return std::nullopt;
 				if (ch == 0)
 				{
 					index += 2;
-					try
-					{
-						return s;
-					}
-					catch (...)
-					{
-						return std::nullopt;
-					}
+					return s;
 				}
+				if (!good_ch(ch))
+					return std::nullopt;
 				s += ch;
 			}
 			return std::nullopt;
