@@ -10,9 +10,9 @@
 
 struct FText
 {
-	std::u16string ns;
-	std::u16string key;
-	std::u16string s;
+	std::wstring ns;
+	std::wstring key;
+	std::wstring s;
 };
 
 template <class T, size_t S>
@@ -26,20 +26,11 @@ bool test_signature(std::array<T, S> signature, std::vector<char> const& buffer,
 	return true;
 }
 
-template <typename T>
-bool good_ch(T ch)
+bool good_ch(wchar_t ch)
 {
 	static const auto loc = std::locale("en_US.UTF-8");
-	if constexpr (std::is_same_v<T, char16_t>)
-	{
-		if (std::isprint(static_cast<wchar_t>(ch), loc))
-			return true;
-	}
-	else
-	{
-		if (std::isprint(ch, loc))
-			return true;
-	}
+	if (std::isprint(ch, loc))
+		return true;
 	if (ch == '\r')
 		return true;
 	if (ch == '\n')
@@ -56,13 +47,13 @@ std::optional<FText> try_read_blueprint_text(std::vector<char> const& buffer, si
 
 	index += BLUEPRINT_TEXT_SIGNATURE.size();
 
-	const auto read_to_null = [&] () -> std::optional<std::u16string> {
+	const auto read_to_null = [&] () -> std::optional<std::wstring> {
 		if (buffer.size() <= index)
 			return std::nullopt;
 
 		if (buffer[index] == 0x1F) // ANSI
 		{
-			std::u16string s;
+			std::wstring s;
 			for (++index; index < buffer.size(); ++index)
 			{
 				const auto ch = buffer[index];
@@ -80,12 +71,12 @@ std::optional<FText> try_read_blueprint_text(std::vector<char> const& buffer, si
 
 		if (buffer[index] == 0x34) // UTF-16
 		{
-			std::u16string s;
+			std::wstring s;
 			for (++index; index < buffer.size(); index += 2)
 			{
 				if (buffer.size() <= index + 1)
 					return std::nullopt;
-				const auto ch = *reinterpret_cast<const char16_t*>(buffer.data() + index);
+				const auto ch = *reinterpret_cast<const wchar_t*>(buffer.data() + index);
 				if (ch == 0)
 				{
 					index += 2;
@@ -120,7 +111,7 @@ std::optional<FText> try_read_ftext(std::vector<char> const& buffer, size_t inde
 {
 	// Need flags (4B) and history (1B) support for more accuracy
 
-	const auto read_string = [&] () -> std::optional<std::u16string> {
+	const auto read_string = [&] () -> std::optional<std::wstring> {
 		if (buffer.size() < index + 4)
 			return std::nullopt;
 		auto length = *reinterpret_cast<const int*>(buffer.data() + index);
@@ -136,10 +127,10 @@ std::optional<FText> try_read_ftext(std::vector<char> const& buffer, size_t inde
 				return std::nullopt;
 			if (buffer[index + 2 * length - 1] != 0)
 				return std::nullopt;
-			std::u16string s;
+			std::wstring s;
 			for (size_t i = index; i < index + 2 * length - 2; i += 2)
 			{
-				const auto ch = *reinterpret_cast<const char16_t*>(buffer.data() + i);
+				const auto ch = *reinterpret_cast<const wchar_t*>(buffer.data() + i);
 				if (ch == 0)
 					return std::nullopt;
 				if (!good_ch(ch))
@@ -155,7 +146,7 @@ std::optional<FText> try_read_ftext(std::vector<char> const& buffer, size_t inde
 				return std::nullopt;
 			if (buffer[index + length - 1] != 0)
 				return std::nullopt;
-			std::u16string s;
+			std::wstring s;
 			for (size_t i = index; i < index + length - 1; ++i)
 			{
 				const auto ch = buffer[i];
@@ -245,7 +236,7 @@ namespace crc32
 		0xbdbdf21c, 0xcabac28a, 0x53b39330, 0x24b4a3a6, 0xbad03605, 0xcdd70693, 0x54de5729, 0x23d967bf, 0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 	};
 
-	unsigned int StrCrc32_Unicode(std::u16string string)
+	unsigned int StrCrc32_Unicode(std::wstring string)
 	{
 		std::vector<unsigned int> buf;
 		for (size_t i = 0; i < string.size(); ++i)
@@ -264,7 +255,7 @@ namespace crc32
 		return CRC ^ 0xFFFFFFFF;
 	}
 
-	unsigned int StrCrc32_ASCII(std::u16string string)
+	unsigned int StrCrc32_ASCII(std::wstring string)
 	{
 		std::vector<unsigned int> buf;
 		for (size_t i = 0; i < string.size(); ++i)
@@ -280,7 +271,7 @@ namespace crc32
 		return CRC ^ 0xFFFFFFFF;
 	}
 
-	unsigned int StrCrc32(std::u16string string)
+	unsigned int StrCrc32(std::wstring string)
 	{
 		bool bNeedUnicode = false;
 		for (size_t i = 0; i < string.size(); ++i)
@@ -312,14 +303,14 @@ int main(int argc, char ** argv)
 	std::vector<FText> texts;
 	directory_extract(std::string(argv[1]), texts);
 
-	std::set<std::u16string> namespaces;
+	std::set<std::wstring> namespaces;
 	for (auto const& text : texts)
 		namespaces.insert(text.ns);
 	auto fout = std::ofstream{ std::string(argv[2]), std::ios::binary | std::ios::out };
 	for (auto const& ns : namespaces)
 	{
-		fout << "=>{" << std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(ns) << "}" << std::endl << std::endl;
-		std::set<std::u16string> unique_check;
+		fout << "=>{" << std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}.to_bytes(ns) << "}" << std::endl << std::endl;
+		std::set<std::wstring> unique_check;
 		for (auto const& text : texts)
 		{
 			if (text.ns != ns)
@@ -329,11 +320,11 @@ int main(int argc, char ** argv)
 			unique_check.insert(text.key);
 			fout
 				<< "=>["
-				<< std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(text.key)
+				<< std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}.to_bytes(text.key)
 				<< "]["
 				<< crc32::StrCrc32(text.s)
 				<< "]" << std::endl
-				<< std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(text.s)
+				<< std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}.to_bytes(text.s)
 				<< std::endl
 				<< std::endl
 			;
