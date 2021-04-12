@@ -1,0 +1,1 @@
+..\x64\Release\UE4TextExtractor.exe . _texts.txt
