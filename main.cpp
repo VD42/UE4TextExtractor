@@ -312,24 +312,32 @@ int main(int argc, char ** argv)
 	std::vector<FText> texts;
 	directory_extract(std::string(argv[1]), texts);
 
-	std::set<std::u16string> unique_check;
-	auto fout = std::ofstream{ std::string(argv[2]), std::ios::binary | std::ios::out };
-	fout << "=>{}" << std::endl << std::endl;
+	std::set<std::u16string> namespaces;
 	for (auto const& text : texts)
+		namespaces.insert(text.ns);
+	auto fout = std::ofstream{ std::string(argv[2]), std::ios::binary | std::ios::out };
+	for (auto const& ns : namespaces)
 	{
-		if (unique_check.find(text.key) != unique_check.end())
-			continue;
-		unique_check.insert(text.key);
-		fout
-			<< "=>["
-			<< std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(text.key)
-			<< "]["
-			<< crc32::StrCrc32(text.s)
-			<< "]" << std::endl
-			<< std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(text.s)
-			<< std::endl
-			<< std::endl
-		;
+		fout << "=>{" << std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(ns) << "}" << std::endl << std::endl;
+		std::set<std::u16string> unique_check;
+		for (auto const& text : texts)
+		{
+			if (text.ns != ns)
+				continue;
+			if (unique_check.find(text.key) != unique_check.end())
+				continue;
+			unique_check.insert(text.key);
+			fout
+				<< "=>["
+				<< std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(text.key)
+				<< "]["
+				<< crc32::StrCrc32(text.s)
+				<< "]" << std::endl
+				<< std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}.to_bytes(text.s)
+				<< std::endl
+				<< std::endl
+			;
+		}
 	}
 	fout << "=>{[END]}" << std::endl;
 	return 0;
