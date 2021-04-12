@@ -109,7 +109,26 @@ std::optional<FText> try_read_blueprint_text(std::vector<char> const& buffer, si
 
 std::optional<FText> try_read_ftext(std::vector<char> const& buffer, size_t index)
 {
-	// Need flags (4B) and history (1B) support for more accuracy
+	if (buffer.size() < index + 5)
+		return std::nullopt;
+
+	const auto flag = *reinterpret_cast<const int*>(buffer.data() + index);
+	index += 4;
+
+	if (0b00011111 < flag) // highest flag right now: InitializedFromString = (1<<4)
+		return std::nullopt;
+
+	if (flag & 0b00000100) // ConvertedProperty = (1 << 2) never set in cooked text
+		return std::nullopt;
+
+	if (flag & 0b00010000) // InitializedFromString = (1 << 4) never set in cooked text
+		return std::nullopt;
+
+	const auto history = *reinterpret_cast<const char*>(buffer.data() + index);
+	index += 1;
+
+	if (history != 0) // support only ETextHistoryType::Base right now, should we support None = -1?
+		return std::nullopt;
 
 	const auto read_string = [&] () -> std::optional<std::wstring> {
 		if (buffer.size() < index + 4)
