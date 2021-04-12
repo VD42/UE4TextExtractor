@@ -95,6 +95,8 @@ std::optional<FText> try_read_blueprint_text(std::vector<char> const& buffer, si
 	const auto s = read_to_null();
 	if (!s.has_value())
 		return std::nullopt;
+	if (s->size() == 0)
+		return std::nullopt;
 	const auto key = read_to_null();
 	if (!key.has_value())
 		return std::nullopt;
@@ -136,7 +138,7 @@ std::optional<FText> try_read_ftext(std::vector<char> const& buffer, size_t inde
 		auto length = *reinterpret_cast<const int*>(buffer.data() + index);
 		index += 4;
 		if (length == 0)
-			return std::nullopt;
+			return L"";
 		if (length < 0)
 		{
 			length = -length;
@@ -190,6 +192,12 @@ std::optional<FText> try_read_ftext(std::vector<char> const& buffer, size_t inde
 		return std::nullopt;
 	const auto s = read_string();
 	if (!s.has_value())
+		return std::nullopt;
+	if (s->size() == 0)
+		return std::nullopt;
+
+	const auto impostor_check = read_string();
+	if (impostor_check.has_value() && 0 < impostor_check->size())
 		return std::nullopt;
 
 	return FText{ ns.value(), key.value(), s.value() };
