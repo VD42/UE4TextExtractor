@@ -78,4 +78,94 @@ Ranged
 =>[EDEBDF194069AFEB7251DCA3AE33F603][3369644176]
 {Range} {Type}
 
+=>[75D94B044037B1D5FE51D7853B8D1395][600092920]
+CHARACTER NAME
+
+=>[3E3ACCEE479B5B83DFB52F971394FC91][1611079881]
+Damage Type
+
+=>[2021E925400264D956272791020EF31A][2386885703]
+Character Type
+
+=>[6FA3C1FD41CAB559CB590F8F80FA434B][36137338]
+Click outside the details to EXIT
+
+=>[8CC73BC543B51D95F1FA2AA362A9CECE][281310389]
+00
+
+=>[D9971F5647EDFE273EC7CD9BEE2E5B47][941875716]
+Enters.
+
+=>[TextBlockDefaultValue][2937330400]
+Text Block
+
+=>[61A58CBB476D1B8F140C3FB1A21B1D3B][2207546476]
+Captain, are you ready for the obligatory tutorial level?
+
+=>[13FF2693451E9261E72A5ABD7DD3C99B][3239067810]
+Alright, but let's make this quick. I got dozens of pirate dickheads to vaporize, and I reckon everyone playing this is already sportin’ a pre-game stiffy.
+
+=>[860809DF4EB3DE508CBDD7852E7D1720][3803081965]
+Don't worry, Captain. There will be something to jerk off to as soon as you complete the mission and return to the Mary Celeste.
+
+=>[1F05D0584D543A55EF54848615F2ACFE][705392036]
+Press ‘{0}’ to display the ship’s HUD.
+
+=>[381CCE7C4FA4E98AA99809A756B0BF7F][1658245011]
+The left side represents the F3N1X’s SHIELDS. These will be automatically recharged after a period of not sustaining damage.
+
+=>[76877680458E8A1126915AA78D3A2B17][1836708213]
+The right side represents the HULL. When the HULL reaches zero, your ship will be destroyed. It can be restored by picking up health drops from enemy ships.
+
+=>[336232174324F16CEBAA55B3BEBC9013][943611476]
+The F3N1X’s HUD can be toggled on and off, but it will flash whenever damage is taken.
+
+=>[D9D028C44B56EEEE1064348092349269][677774112]
+We will now perform a standard engine check by assessing your familiarity with WASD movement.
+
+=>[020D3DC240C3A2FDC332DE9DC1A8D6D4][3007667344]
+Follow the objective indicator and use the ‘{0}’ keys to move through the rings as they appear.
+
+=>[B951041C4124AE4192254CB062CA2313][1685546487]
+Very good. Now, let’s try cruise mode. This will provide a significant speed boost, but it will also disable your weapons.
+
+=>[31A087DD454E80A5FAE271A44C709E8F][3540609107]
+Press ‘{0}’ to toggle cruise mode. This will allow you to move faster but will also disable your weapons.
+
+=>[0A89AF784E1D95CEF0AB6F84C2FE5AE6][2939711774]
+Readings are green. Next is a routine weapons test. Please click the left mouse button to fire your generic unlimited ammo laser cannon primary attack. 
+
+=>[280A5A1A4CCCE92BB2361F822B7D999F][1510814569]
+Press and hold the ‘{0}’ button down to fire your BASIC CANNON at the targets.
+
+=>[72E1A3434CA201E0C791A3994DAE177C][527584302]
+Your ability to follow basic instructions is confirmed. The special weapon system also requires some explanation.
+
+=>[D94010454A0B9C45EC0846B118FFA2DE][479012998]
+Press the right mouse button to fire your missile, then press it again for manual detonation.
+
+=>[089159DC487F273A6995E0B4CBFF28C2][3138084242]
+Press the ‘{0}’ button once to fire your MISSILE.
+
+=>[01F8D21544E1CFC223B42D86E528070A][616811897]
+Press the ‘{0}’ button again for MANUAL DETONATION.
+
+=>[76822897497C2D5C1B8B7FB41BF70A73][3255761656]
+You can also detonate the energy missile in mid flight. Try firing your energy missile again once the bar below your ship refills. It will flash several times and disappear indicating that your missile is ready again.
+
+=>[2450AFCD45A7DA309077C0A1F0B31C47][3010450055]
+This attack uses your ship’s rechargeable ENERGY. The right side of the bar indicates if it is ready, and the left side indicates if your thrust is ready.
+
+=>[DB7F805743D266620D9DC49AE8109ED4][3165535634]
+Press the '{0}' button again to detonate the energy missile.
+
+=>[B30CAFB143866183982A9E868043BA75][2948998577]
+Missiles are fully functional. However, there is one last thing that requires testing - the prototype charge drive installed on the F3N1X.
+
+=>[E8B1CE5D43BAA46FF7F9A6AFAD16201B][2113186767]
+Press the ‘{0}’ to use the THRUST ATTACK. This ability can be used to evade or destroy smaller ships and consumes energy. Thrust through the hologram spheres to complete the tutorial.
+
+=>[B58932E6451633D1EF3B1E86C381E800][604179371]
+Initial checks are complete, Captain. You are officially ready to start some shit. 
+
 =>{[END]}

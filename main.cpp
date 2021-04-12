@@ -26,6 +26,27 @@ bool test_signature(std::array<T, S> signature, std::vector<char> const& buffer,
 	return true;
 }
 
+template <typename T>
+bool good_ch(T ch)
+{
+	static const auto loc = std::locale("en_US.UTF-8");
+	if constexpr (std::is_same_v<T, char16_t>)
+	{
+		if (std::isprint(static_cast<wchar_t>(ch), loc))
+			return true;
+	}
+	else
+	{
+		if (std::isprint(ch, loc))
+			return true;
+	}
+	if (ch == '\r')
+		return true;
+	if (ch == '\n')
+		return true;
+	return false;
+};
+
 std::optional<FText> try_read_blueprint_text(std::vector<char> const& buffer, size_t index)
 {
 	constexpr std::array<char, 2> BLUEPRINT_TEXT_SIGNATURE = { 0x29, 0x01 };
@@ -34,17 +55,6 @@ std::optional<FText> try_read_blueprint_text(std::vector<char> const& buffer, si
 		return std::nullopt;
 
 	index += BLUEPRINT_TEXT_SIGNATURE.size();
-
-	const auto good_ch = [] (auto ch) {
-		static const auto loc = std::locale("en_US.UTF-8");
-		if (std::isprint(ch, loc))
-			return true;
-		if (ch == '\r')
-			return true;
-		if (ch == '\n')
-			return true;
-		return false;
-	};
 
 	const auto read_to_null = [&] () -> std::optional<std::u16string> {
 		if (buffer.size() <= index)
@@ -73,11 +83,9 @@ std::optional<FText> try_read_blueprint_text(std::vector<char> const& buffer, si
 			std::u16string s;
 			for (++index; index < buffer.size(); index += 2)
 			{
-				const auto ch1 = buffer[index];
 				if (buffer.size() <= index + 1)
 					return std::nullopt;
-				const auto ch2 = buffer[index + 1];
-				const auto ch = static_cast<char16_t>(ch1) + static_cast<char16_t>(ch2) * 255;
+				const auto ch = *reinterpret_cast<const char16_t*>(buffer.data() + index);
 				if (ch == 0)
 				{
 					index += 2;
@@ -99,8 +107,79 @@ std::optional<FText> try_read_blueprint_text(std::vector<char> const& buffer, si
 	const auto key = read_to_null();
 	if (!key.has_value())
 		return std::nullopt;
+	if (key->size() == 0)
+		return std::nullopt;
 	const auto ns = read_to_null();
 	if (!ns.has_value())
+		return std::nullopt;
+
+	return FText{ ns.value(), key.value(), s.value() };
+}
+
+std::optional<FText> try_read_ftext(std::vector<char> const& buffer, size_t index)
+{
+	// Need flags (4B) and history (1B) support for more accuracy
+
+	const auto read_string = [&] () -> std::optional<std::u16string> {
+		if (buffer.size() < index + 4)
+			return std::nullopt;
+		auto length = *reinterpret_cast<const int*>(buffer.data() + index);
+		index += 4;
+		if (length == 0)
+			return std::nullopt;
+		if (length < 0)
+		{
+			length = -length;
+			if (buffer.size() < index + 2 * length)
+				return std::nullopt;
+			if (buffer[index + 2 * length - 2] != 0)
+				return std::nullopt;
+			if (buffer[index + 2 * length - 1] != 0)
+				return std::nullopt;
+			std::u16string s;
+			for (size_t i = index; i < index + 2 * length - 2; i += 2)
+			{
+				const auto ch = *reinterpret_cast<const char16_t*>(buffer.data() + i);
+				if (ch == 0)
+					return std::nullopt;
+				if (!good_ch(ch))
+					return std::nullopt;
+				s += ch;
+			}
+			index += length + 2;
+			return s;
+		}
+		else
+		{
+			if (buffer.size() < index + length)
+				return std::nullopt;
+			if (buffer[index + length - 1] != 0)
+				return std::nullopt;
+			std::u16string s;
+			for (size_t i = index; i < index + length - 1; ++i)
+			{
+				const auto ch = buffer[i];
+				if (ch == 0)
+					return std::nullopt;
+				if (!good_ch(ch))
+					return std::nullopt;
+				s += ch;
+			}
+			index += length;
+			return s;
+		}
+	};
+
+	const auto ns = read_string();
+	if (!ns.has_value())
+		return std::nullopt;
+	const auto key = read_string();
+	if (!key.has_value())
+		return std::nullopt;
+	if (key->size() == 0)
+		return std::nullopt;
+	const auto s = read_string();
+	if (!s.has_value())
 		return std::nullopt;
 
 	return FText{ ns.value(), key.value(), s.value() };
@@ -121,7 +200,16 @@ void file_extract(std::filesystem::path file, std::vector<FText> & texts)
 	{
 		auto text = try_read_blueprint_text(buffer, i);
 		if (text.has_value())
+		{
 			texts.push_back(text.value());
+			continue;
+		}
+		text = try_read_ftext(buffer, i);
+		if (text.has_value())
+		{
+			texts.push_back(text.value());
+			continue;
+		}
 	}
 }
 
