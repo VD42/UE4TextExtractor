@@ -117,6 +117,9 @@ That’s called choice-supportive bias. I am honest. Callum really grinds my gea
 =>[E002E8F64B4C30198D60EC91C115FAC5][1519968340]
 It'd serve the little fuck right if I just abandoned him.
 
+=>[5A4B08F642FA5E4653D1E79DB1FA5D41][1347973680]
+I haven't seen Mr Bear, Callum.
+
 =>[61A58CBB476D1B8F140C3FB1A21B1D3B][2207546476]
 Captain, are you ready for the obligatory tutorial level?
 
@@ -185,6 +188,12 @@ Press the ‘{0}’ to use the THRUST ATTACK. This ability can be used to evade 
 
 =>[B58932E6451633D1EF3B1E86C381E800][604179371]
 Initial checks are complete, Captain. You are officially ready to start some shit. 
+
+=>[AA1781154B4775204A9D08B62AE68AF6][3001482367]
+Increase Speed
+
+=>[DCCB6055410FB0C7713A449175A079D4][2002769585]
+Decrease Speed
 
 =>{UMG}
 
