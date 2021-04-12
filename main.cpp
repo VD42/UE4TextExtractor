@@ -38,6 +38,16 @@ bool good_ch(wchar_t ch)
 	return false;
 }
 
+bool very_good_key(std::wstring const& key)
+{
+	if (key.size() != 32)
+		return false;
+	for (const auto c : key)
+		if (!(L'0' <= c && c <= L'9' || L'A' <= c && c <= L'F'))
+			return false;
+	return true;
+}
+
 bool good_s(std::wstring const& s)
 {
 	static const auto loc = std::locale("en_US.UTF-8");
@@ -106,8 +116,6 @@ std::optional<std::pair<FText, size_t>> try_read_blueprint_text(std::vector<char
 		return std::nullopt;
 	if (s->size() == 0)
 		return std::nullopt;
-	if (!good_s(s.value()))
-		return std::nullopt;
 	const auto key = read_to_null();
 	if (!key.has_value())
 		return std::nullopt;
@@ -115,6 +123,8 @@ std::optional<std::pair<FText, size_t>> try_read_blueprint_text(std::vector<char
 		return std::nullopt;
 	if (128 < key->size())   // static const int32 InlineStringSize = 128;
 		return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
+	if (!very_good_key(key.value()) && !good_s(s.value()))
+		return std::nullopt;
 	const auto ns = read_to_null();
 	if (!ns.has_value())
 		return std::nullopt;
@@ -214,7 +224,7 @@ std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& 
 		return std::nullopt;
 	if (s->size() == 0)
 		return std::nullopt;
-	if (!good_s(s.value()))
+	if (!very_good_key(key.value()) && !good_s(s.value()))
 		return std::nullopt;
 
 	const auto current_index = index;
