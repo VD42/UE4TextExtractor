@@ -36,9 +36,18 @@ bool good_ch(wchar_t ch)
 	if (ch == '\n')
 		return true;
 	return false;
-};
+}
 
-std::optional<FText> try_read_blueprint_text(std::vector<char> const& buffer, size_t index)
+bool good_s(std::wstring const& s)
+{
+	static const auto loc = std::locale("en_US.UTF-8");
+	for (const auto c : s)
+		if (std::isalpha(c))
+			return true;
+	return false;
+}
+
+std::optional<std::pair<FText, size_t>> try_read_blueprint_text(std::vector<char> const& buffer, size_t index)
 {
 	constexpr std::array<char, 2> BLUEPRINT_TEXT_SIGNATURE = { 0x29, 0x01 };
 
@@ -97,19 +106,25 @@ std::optional<FText> try_read_blueprint_text(std::vector<char> const& buffer, si
 		return std::nullopt;
 	if (s->size() == 0)
 		return std::nullopt;
+	if (!good_s(s.value()))
+		return std::nullopt;
 	const auto key = read_to_null();
 	if (!key.has_value())
 		return std::nullopt;
 	if (key->size() == 0)
 		return std::nullopt;
+	if (128 < key->size())   // static const int32 InlineStringSize = 128;
+		return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
 	const auto ns = read_to_null();
 	if (!ns.has_value())
 		return std::nullopt;
+	if (128 < ns->size())    // static const int32 InlineStringSize = 128;
+		return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
 
-	return FText{ ns.value(), key.value(), s.value() };
+	return std::pair{ FText{ ns.value(), key.value(), s.value() }, index };
 }
 
-std::optional<FText> try_read_ftext(std::vector<char> const& buffer, size_t index)
+std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& buffer, size_t index)
 {
 	if (buffer.size() < index + 5)
 		return std::nullopt;
@@ -185,22 +200,30 @@ std::optional<FText> try_read_ftext(std::vector<char> const& buffer, size_t inde
 	const auto ns = read_string();
 	if (!ns.has_value())
 		return std::nullopt;
+	if (128 < ns->size())    // static const int32 InlineStringSize = 128;
+		return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
 	const auto key = read_string();
 	if (!key.has_value())
 		return std::nullopt;
 	if (key->size() == 0)
 		return std::nullopt;
+	if (128 < key->size())   // static const int32 InlineStringSize = 128;
+		return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
 	const auto s = read_string();
 	if (!s.has_value())
 		return std::nullopt;
 	if (s->size() == 0)
 		return std::nullopt;
+	if (!good_s(s.value()))
+		return std::nullopt;
+
+	const auto current_index = index;
 
 	const auto impostor_check = read_string();
 	if (impostor_check.has_value() && 0 < impostor_check->size())
 		return std::nullopt;
 
-	return FText{ ns.value(), key.value(), s.value() };
+	return std::pair{ FText{ ns.value(), key.value(), s.value() }, current_index };
 }
 
 void file_extract(std::filesystem::path file, std::vector<FText> & texts)
@@ -219,13 +242,15 @@ void file_extract(std::filesystem::path file, std::vector<FText> & texts)
 		auto text = try_read_blueprint_text(buffer, i);
 		if (text.has_value())
 		{
-			texts.push_back(text.value());
+			texts.push_back(text.value().first);
+			i = text.value().second - 1;
 			continue;
 		}
 		text = try_read_ftext(buffer, i);
 		if (text.has_value())
 		{
-			texts.push_back(text.value());
+			texts.push_back(text.value().first);
+			i = text.value().second - 1;
 			continue;
 		}
 	}

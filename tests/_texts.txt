@@ -1,8 +1,5 @@
 =>{}
 
-=>[BoneWeightMaterial][236250997]
-$
-
 =>[01AF167448C107A9269271AEE0719BA5][3934672951]
 Passive
 
@@ -93,9 +90,6 @@ Character Type
 =>[6FA3C1FD41CAB559CB590F8F80FA434B][36137338]
 Click outside the details to EXIT
 
-=>[8CC73BC543B51D95F1FA2AA362A9CECE][281310389]
-00
-
 =>[D9971F5647EDFE273EC7CD9BEE2E5B47][941875716]
 Enters.
 
@@ -119,12 +113,6 @@ That’s called choice-supportive bias. I am honest. Callum really grinds my gea
 
 =>[E002E8F64B4C30198D60EC91C115FAC5][1519968340]
 It'd serve the little fuck right if I just abandoned him.
-
-=>[DefaultDeferredDecalMaterial][1775452376]
-1
-
-=>[Compiling DefaultDeferredDecalMaterial: Platform=PCD3D_SM5, Usage=LightingModel=MSM_DefaultLit, BlendMode=BLEND_Translucent, SpecialEngine=0, TwoSided=0, TSNormal=1, Masked=0, Distorted=0, WritesEveryPixel=1, ModifiesMeshPosition=0, Usage={bUsedWithSkeletalMesh,bUsedWithStaticLighting}, StaticMaterialLayers=][1153587405]
-(
 
 =>[5A4B08F642FA5E4653D1E79DB1FA5D41][1347973680]
 I haven't seen Mr Bear, Callum.
