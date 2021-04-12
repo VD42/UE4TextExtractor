@@ -96,9 +96,6 @@ Click outside the details to EXIT
 =>[D9971F5647EDFE273EC7CD9BEE2E5B47][941875716]
 Enters.
 
-=>[TextBlockDefaultValue][2937330400]
-Text Block
-
 =>[61A58CBB476D1B8F140C3FB1A21B1D3B][2207546476]
 Captain, are you ready for the obligatory tutorial level?
 
@@ -167,5 +164,10 @@ Press the ‘{0}’ to use the THRUST ATTACK. This ability can be used to evade 
 
 =>[B58932E6451633D1EF3B1E86C381E800][604179371]
 Initial checks are complete, Captain. You are officially ready to start some shit. 
+
+=>{UMG}
+
+=>[TextBlockDefaultValue][2937330400]
+Text Block
 
 =>{[END]}
