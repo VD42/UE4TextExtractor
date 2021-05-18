@@ -8,6 +8,8 @@
 #include <iostream>
 #include <set>
 
+#include <windows.h>
+
 struct FText
 {
 	std::wstring ns;
@@ -28,8 +30,7 @@ bool test_signature(std::array<T, S> signature, std::vector<char> const& buffer,
 
 bool good_ch(wchar_t ch)
 {
-	static const auto loc = std::locale("en_US.UTF-8");
-	if (std::isprint(ch, loc))
+	if (std::isprint(ch, std::locale{}))
 		return true;
 	if (ch == '\r')
 		return true;
@@ -50,9 +51,8 @@ bool very_good_key(std::wstring const& key)
 
 bool good_s(std::wstring const& s)
 {
-	static const auto loc = std::locale("en_US.UTF-8");
 	for (const auto c : s)
-		if (std::isalpha(c))
+		if (std::isalpha(c, std::locale{}))
 			return true;
 	return false;
 }
@@ -236,12 +236,12 @@ std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& 
 	return std::pair{ FText{ ns.value(), key.value(), s.value() }, current_index };
 }
 
-void file_extract(std::filesystem::path file, std::vector<FText> & texts)
+void file_extract(std::filesystem::path root, std::filesystem::path file, std::vector<FText> & texts)
 {
 	if (!(file.extension() == ".uasset" || file.extension() == ".uexp" || file.extension() == ".umap"))
 		return;
 
-	std::cout << file << std::endl;
+	std::wcout << std::filesystem::relative(file, root) << std::endl;
 
 	auto fin = std::ifstream{ file, std::ios::binary | std::ios::ate };
 	auto buffer = std::vector<char>(fin.tellg());
@@ -266,14 +266,14 @@ void file_extract(std::filesystem::path file, std::vector<FText> & texts)
 	}
 }
 
-void directory_extract(std::filesystem::path directory, std::vector<FText> & texts)
+void directory_extract(std::filesystem::path root, std::filesystem::path directory, std::vector<FText> & texts)
 {
 	for (auto const& entry : std::filesystem::directory_iterator(directory))
 	{
 		if (entry.is_directory())
-			directory_extract(entry, texts);
+			directory_extract(root, entry, texts);
 		else
-			file_extract(entry, texts);
+			file_extract(root, entry, texts);
 	}
 }
 
@@ -351,27 +351,32 @@ namespace crc32
 	}
 }
 
-int main(int argc, char ** argv)
+int wmain(int argc, wchar_t ** argv)
 {
+	std::locale::global(std::locale{ std::locale::classic(), "en_US.UTF-8", std::locale::ctype });
+
+	SetConsoleOutputCP(CP_UTF8);
+	SetConsoleCP(CP_UTF8);
+
 	if (argc < 3)
 	{
-		std::cout
-			<< "UE4TextExtractor.exe <path to folder with extracted from pak files> <path to locres.txt file>" << std::endl << std::endl
-			<< R"(Example: UE4TextExtractor.exe "C:\Users\john\MyGame\MyGame\Content\Paks\unpacked" "C:\Users\john\MyGame\MyGame\Content\Paks\texts_to_locres.txt")" << std::endl
+		std::wcout
+			<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to locres.txt file>" << std::endl << std::endl
+			<< LR"(Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\unpacked" "C:\MyGame\Content\Paks\texts_to_locres.txt")" << std::endl
 		;
 		return 1;
 	}
 
 	std::vector<FText> texts;
-	directory_extract(std::string(argv[1]), texts);
+	directory_extract(std::wstring(argv[1]), std::wstring(argv[1]), texts);
 
 	std::set<std::wstring> namespaces;
 	for (auto const& text : texts)
 		namespaces.insert(text.ns);
-	auto fout = std::ofstream{ std::string(argv[2]), std::ios::binary | std::ios::out };
+	auto fout = std::wofstream{ std::wstring(argv[2]), std::ios::out };
 	for (auto const& ns : namespaces)
 	{
-		fout << "=>{" << std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}.to_bytes(ns) << "}" << std::endl << std::endl;
+		fout << L"=>{" << ns << L"}" << std::endl << std::endl;
 		std::set<std::wstring> unique_check;
 		for (auto const& text : texts)
 		{
@@ -380,18 +385,9 @@ int main(int argc, char ** argv)
 			if (unique_check.find(text.key) != unique_check.end())
 				continue;
 			unique_check.insert(text.key);
-			fout
-				<< "=>["
-				<< std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}.to_bytes(text.key)
-				<< "]["
-				<< crc32::StrCrc32(text.s)
-				<< "]" << std::endl
-				<< std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>, wchar_t>{}.to_bytes(text.s)
-				<< std::endl
-				<< std::endl
-			;
+			fout << L"=>[" << text.key << L"][" << crc32::StrCrc32(text.s) << L"]" << std::endl << text.s << std::endl << std::endl;
 		}
 	}
-	fout << "=>{[END]}" << std::endl;
+	fout << L"=>{[END]}" << std::endl;
 	return 0;
 }
