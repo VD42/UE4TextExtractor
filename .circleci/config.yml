@@ -15,11 +15,5 @@ jobs:
           name: "Test"
           command: "cd tests && call __run.bat"
       - run:
-          name: "Check0"
-          command: "dir"
-      - run:
-          name: "Check0"
-          command: "git status --porcelain"
-      - run:
           name: "Check"
-          command: "for /f %i in ('git status --porcelain') do (exit /b 1)"
+          command: "git diff --exit-code"
