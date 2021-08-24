@@ -13,7 +13,7 @@ jobs:
           command: "msbuild UE4TextExtractor.sln -p:Configuration=Release"
       - run:
           name: "Test"
-          command: "call tests/__run.bat"
+          command: "cd tests && call __run.bat"
       - run:
           name: "Check"
           command: "for /f %i in ('git status --porcelain') do (exit /b 1)"
