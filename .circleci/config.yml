@@ -9,6 +9,12 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "Check0"
+          command: "devenv.exe"
+      - run:
+          name: "Check0-2"
+          command: "msbuild"
+      - run:
           name: "Check1"
           command: "dir \"C:\\\""
       - run:
