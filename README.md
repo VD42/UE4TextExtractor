@@ -1,5 +1,7 @@
 # UE4TextExtractor
 
+[![CircleCI](https://circleci.com/gh/VD42/UE4TextExtractor/tree/master.svg?style=svg)](https://circleci.com/gh/VD42/UE4TextExtractor/tree/master)
+
 Extract localizable text from .uasset, .uexp and .umap files.
 
 Usage:  
