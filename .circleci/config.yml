@@ -9,6 +9,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "PATH"
+          command: "echo %PATH%"
+      - run:
           name: "Check0"
           command: "devenv.exe"
       - run:
