@@ -9,5 +9,26 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "Check1"
+          command: "dir \"C:\\\""
+      - run:
+          name: "Check2"
+          command: "dir \"C:\\Program Files (x86)\""
+      - run:
+          name: "Check3"
+          command: "dir \"C:\\Program Files (x86)\\Microsoft Visual Studio\""
+      - run:
+          name: "Check4"
+          command: "dir \"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\""
+      - run:
+          name: "Check5"
+          command: "dir \"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\""
+      - run:
+          name: "Check6"
+          command: "dir \"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Common7\""
+      - run:
+          name: "Check7"
+          command: "dir \"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Common7\\IDE\""
+      - run:
           name: "Build"
           command: "\"C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\Community\\Common7\\IDE\\devenv.exe\" UE4TextExtractor.sln /Build Release"
