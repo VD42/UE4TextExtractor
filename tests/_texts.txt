@@ -412,36 +412,36 @@ Spider Nest
 Ally
 
 =>[880AAECB44E4CFCAE71E869BAA32B605][1297655859]
-RIGHT CLICK = Exit Navigation System
+RIGHT CLICK = Exit Navigation System
 LEFT CLICK = Select Nebula
 
 =>[A5AAD36E4F9C69C484F1479390981B35][1125700625]
-RIGHT CLICK = Return to Galaxy
+RIGHT CLICK = Return to Galaxy
 LEFT CLICK = Select Solar System
 
 =>[7927D62A40770BF6571E3DB3758B6433][3265810804]
-LEFT CLICK = Select Anomaly
+LEFT CLICK = Select Anomaly
 RIGHT CLICK = Scan Anomaly
 
 =>[FB86B42B4F2834F40EDC4BB4D9DD3C38][848677033]
 {0}
 
 =>[EC60AE2D48AC71D56A30AF98892A4111][3039530406]
-{2} = Change Music Track
-{3} = Return to Mary Celeste
-{1} = Exit Navigation System
+{2} = Change Music Track
+{3} = Return to Mary Celeste
+{1} = Exit Navigation System
 {0} = Select Nebula
 
 =>[1C5C60704821A42DED28A381BE6229C6][729442482]
-{2} = Change Music Track
-{3} = Return to Mary Celeste
-{1} = Return to Galaxy
+{2} = Change Music Track
+{3} = Return to Mary Celeste
+{1} = Return to Galaxy
 {0} = Select Solar System
 
 =>[9BF5854A40A4A20CB86994AAC02A4915][1660658448]
-{2} = Change Music Track
-{3} = Return to Mary Celeste
-{0} = Select Anomaly
+{2} = Change Music Track
+{3} = Return to Mary Celeste
+{0} = Select Anomaly
 {1} = Scan Anomaly
 
 =>[F1183795474081F1DD408A83C03A3D4F][2211055702]

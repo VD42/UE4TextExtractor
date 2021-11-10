@@ -373,10 +373,10 @@ int wmain(int argc, wchar_t ** argv)
 	std::set<std::wstring> namespaces;
 	for (auto const& text : texts)
 		namespaces.insert(text.ns);
-	auto fout = std::wofstream{ std::wstring(argv[2]), std::ios::out };
+	auto fout = std::wofstream{ std::wstring(argv[2]), std::ios::binary | std::ios::out };
 	for (auto const& ns : namespaces)
 	{
-		fout << L"=>{" << ns << L"}" << std::endl << std::endl;
+		fout << L"=>{" << ns << L"}" << '\r' << '\n' << '\r' << '\n';
 		std::set<std::wstring> unique_check;
 		for (auto const& text : texts)
 		{
@@ -385,9 +385,9 @@ int wmain(int argc, wchar_t ** argv)
 			if (unique_check.find(text.key) != unique_check.end())
 				continue;
 			unique_check.insert(text.key);
-			fout << L"=>[" << text.key << L"][" << crc32::StrCrc32(text.s) << L"]" << std::endl << text.s << std::endl << std::endl;
+			fout << L"=>[" << text.key << L"][" << crc32::StrCrc32(text.s) << L"]" << '\r' << '\n' << text.s << '\r' << '\n' << '\r' << '\n';
 		}
 	}
-	fout << L"=>{[END]}" << std::endl;
+	fout << L"=>{[END]}" << '\r' << '\n';
 	return 0;
 }
