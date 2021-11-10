@@ -5,6 +5,8 @@
 "DefaultDeferredDecalMaterial.uexp"
 "Font_1.uasset"
 "Font_6.uasset"
+"GridCombatCharacterList.uexp"
+"NavigationGameMode.uexp"
 "SoundWave_1.uasset"
 "SpaceCombatTutorialSpeechBubbles.uexp"
 "Texture2D_1.uasset"
