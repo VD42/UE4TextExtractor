@@ -7,6 +7,7 @@
 "Font_6.uasset"
 "GridCombatCharacterList.uexp"
 "NavigationGameMode.uexp"
+"SingleLangAllLevel_EN_US_Byblos.uexp"
 "SoundWave_1.uasset"
 "SpaceCombatTutorialSpeechBubbles.uexp"
 "Texture2D_1.uasset"
