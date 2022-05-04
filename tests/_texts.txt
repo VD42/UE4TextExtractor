@@ -453,8 +453,8 @@ RIGHT CLICK = Scan Anomaly
 =>[86936DCA49A5EB2F71CCB8B41DF89B24][3011266979]
 You found {R}.
 
-=>[SingleLangAllLevel_EN_US_Byblos][1202454222]
-cmnmesg_03_sk3_101_DefaultText
+=>[SingleLangAllLevel_EN_US_Byblos][879176297]
+vo_bat_crltt_sp_attack_hhh_01_DefaultText
 
 =>[5A4B08F642FA5E4653D1E79DB1FA5D41][1347973680]
 I haven't seen Mr Bear, Callum.
@@ -535,6 +535,12 @@ Increase Speed
 Decrease Speed
 
 =>{SingleLangAllLevel_EN_US_Byblos}
+
+=>[cmnmesg_03_sk3_101_DefaultText][19847554]
+Lv: ■現在レベル数値■
+
+=>[cmnmesg_03_sk3_102_DefaultText][334952205]
+MP: ■現在ＭＰ数値■
 
 =>[cmnmesg_03_sk3_103_DefaultText][1807083499]
 <center>The door is shut.</center>
@@ -907,6 +913,12 @@ New Game
 Continue
 Sound Settings
 
+=>[cmnmesg_03_sk3_226_DefaultText][3272014774]
+Press ■A■ to select the main character.
+
+=>[cmnmesg_03_sk3_227_DefaultText][4270704974]
+Press ■A■ to select your companions.
+
 =>[cmnmesg_03_sk3_228_DefaultText][3444195717]
 Stereo
 Mono
@@ -1002,6 +1014,12 @@ You can't equip this, but your companion can.
 =>[cmnmesg_03_sk3_259_DefaultText][2058060789]
 Storage is full.
 
+=>[cmnmesg_03_sk3_260_DefaultText][376443378]
+■入手アイテム■ has been sent to storage.
+
+=>[cmnmesg_03_sk3_261_DefaultText][3976166566]
+The seed sprouted! Obtained ■アイテム名■!
+
 =>[cmnmesg_03_sk3_262_DefaultText][383765329]
 You don't have any seeds.
 
@@ -1060,6 +1078,12 @@ Spirit:_
 
 Luck:_
 
+=>[cmnmesg_03_sk3_268_DefaultText][1941560149]
+Raise your ■ボーナスパラメータ■?
+
+=>[cmnmesg_03_sk3_269_DefaultText][2684583757]
+Raised ■ボーナスパラメータ■!
+
 =>[cmnmesg_03_sk3_270_DefaultText][389308617]
 Strength
 
@@ -1083,6 +1107,15 @@ Yes
 
 =>[cmnmesg_03_sk3_277_DefaultText][980478179]
 No
+
+=>[cmnmesg_03_sk3_278_DefaultText][230915351]
+Obtained ■アイテム名■!
+
+=>[cmnmesg_03_sk3_279_DefaultText][417717377]
+■アイテム名■ has been sent to storage.
+
+=>[cmnmesg_03_sk3_280_DefaultText][3077969192]
+Learned ■魔法名　範囲■!
 
 =>[cmnmesg_03_sk3_281_DefaultText][1263765745]
 Items
@@ -1113,6 +1146,9 @@ You have reached the limit. What would you like to do?
 
 =>[cmnmesg_03_sk3_301_DefaultText][1788892001]
 Obtained 500 GP!
+
+=>[cmnmesg_03_sk3_302_DefaultText][2929928405]
+Obtained ■ルク■ GP!
 
 =>[cmnmesg_03_sk3_303_DefaultText][4213183366]
 Obtained 10 GP!
@@ -1883,6 +1919,21 @@ No reaction because Faerie isn't with you...
 =>[msg_sys_cmn_maphint003_DefaultText][2755496929]
 <center>When all six illusions are no more, offer a prayer to this statue...</center>
 
+=>[msg_sys_cmn_board001_DefaultText][1494313250]
+<center>↑</center>
+<center>Jadd Stronghold</center>
+
+=>[msg_sys_cmn_board002_DefaultText][4124866219]
+<center>↑ Lakeside Town Astoria</center>
+<center>↓ Jadd Stronghold</center>
+
+=>[msg_sys_cmn_board003_DefaultText][2561245940]
+<center>← Lakeside Town Astoria</center>
+
+=>[msg_sys_cmn_board004_DefaultText][3542500806]
+<center>↑</center>
+<center>Cascade Cavern/Holy City Wendel</center>
+
 =>[msg_sys_cmn_board005_DefaultText][1708908815]
 <center>Fortune Readings:</center>
 <center>A look into your future!</center>
@@ -1891,8 +1942,18 @@ No reaction because Faerie isn't with you...
 <center>Molebear Moors ahead.</center>
 <center>Beware wild Molebears!</center>
 
+=>[msg_sys_cmn_board007_DefaultText][2925443303]
+<center>↑ Valsena, Kingdom of the Plains</center>
+<center>↓ Stonesplit Gap/Free City of Maia</center>
+
 =>[msg_sys_cmn_board008_DefaultText][4075643137]
 <center>Phantasmal light will bring the destruction of the town...</center>
+
+=>[msg_sys_cmn_board009_DefaultText][2018448834]
+<center>← Holy City Wendel</center>
+
+=>[msg_sys_cmn_board010_DefaultText][3923857995]
+<center>↓ Holy City Wendel</center>
 
 =>[msg_sys_cmn_board011_DefaultText][4156215574]
 <center>Wendel is ahead.</center>
@@ -1915,6 +1976,20 @@ No reaction because Faerie isn't with you...
 =>[msg_sys_cmn_board016_DefaultText][1775708203]
 <center>Golden Road ahead!</center>
 <center>Beware of monsters!</center>
+
+=>[msg_sys_cmn_board017_DefaultText][970830168]
+<center>← Valsena, Kingdom of the Plains</center>
+<center>Stonesplit Gap →</center>
+
+=>[msg_sys_cmn_board018_DefaultText][2016905686]
+<center>← Desert Capital Sirhtan</center>
+<center>Oasis of Diin</center>
+<center>↓</center>
+
+=>[msg_sys_cmn_board019_DefaultText][621727215]
+<center>↑</center>
+<center>Oasis of Diin</center>
+<center>Desert Capital Sirhtan →</center>
 
 =>[msg_sys_cmn_board020_DefaultText][3707654895]
 <center>Oasis of Diin</center>
@@ -1939,9 +2014,33 @@ No reaction because Faerie isn't with you...
 =>[msg_sys_cmn_board025_DefaultText][734481175]
 <center>Fifth plateau: Heavensway</center>
 
+=>[msg_sys_cmn_board026_DefaultText][2907160544]
+<center>↑</center>
+<center>Laurent, Kingdom of Wind</center>
+<center>Palo Port →</center>
+
 =>[msg_sys_cmn_board027_DefaultText][752479267]
 <center>Gusthall:</center>
 <center>No unauthorized entry.</center>
+
+=>[msg_sys_cmn_board028_DefaultText][3351623143]
+<center>→ → →</center>
+<center>This way to Tomato Town.</center>
+<center>Visitors welcome!</center>
+
+=>[msg_sys_cmn_board029_DefaultText][2150215238]
+<center>↑ Altena, Kingdom of Magicians</center>
+<center>Snow Hamlet Alrant →</center>
+<center>↓ Labyrinth of Ice</center>
+
+=>[msg_sys_cmn_board030_DefaultText][2358370207]
+<center>← Altena, Kingdom of Magicians</center>
+<center>Snow Hamlet Alrant →</center>
+
+=>[msg_sys_cmn_board031_DefaultText][3506772146]
+<center>Moonlight Town Mintas →</center>
+<center>Ferolia, Beast Kingdom</center>
+<center>↓</center>
 
 =>[msg_sys_cmn_board032_DefaultText][2645318101]
 <center>The weathered sign reads, "Pedda."</center>
@@ -2379,6 +2478,9 @@ This game autosaves.
 
 =>[msg_sys_cmn_saveload029_PCText][3260622464]
 Do not turn off the computer when the above icon appears. Save data may be lost.
+
+=>[msg_sys_cmn_saveload029_SwitchText][492465075]
+Do not turn off the power to the Nintendo Switch™ console when the above icon appears. Save data may be lost.
 
 =>[msg_sys_cmn_saveload029_PS4Text][1763448225]
 Do not turn off the power to the PlayStation®4 system when the above icon appears. Save data may be lost.
@@ -2907,6 +3009,33 @@ Laurent Secret Base
 =>[mapname_03_sk3_108_DefaultText][1203961611]
 <center>Sanctuary of Mana</center>
 
+=>[mapname_03_sk3_201_DefaultText][985876443]
+Moonlight Town Mintas
+←Duskmoon Forest
+
+=>[mapname_03_sk3_202_DefaultText][2001381842]
+Welcome to Maia!→
+←Stonesplit Gap/Valsena
+←Beiser
+
+=>[mapname_03_sk3_203_DefaultText][1849116018]
+Stonesplit Gap/Valsena↑
+←Beiser
+Maia↓
+
+=>[mapname_03_sk3_204_DefaultText][2140986639]
+Astoria
+↓
+
+=>[mapname_03_sk3_205_DefaultText][3490334068]
+Cascade Cavern/Wendel→
+Astoria
+↓
+
+=>[mapname_03_sk3_206_DefaultText][977878195]
+↑2F "Fortune Readings"
+(A look into your future!)
+
 =>[mapname_03_sk3_207_DefaultText][2079284356]
 <center>(Beware the guard dog!)</center>
 
@@ -2924,6 +3053,24 @@ Putty Toss
 
 =>[mdcname_03_sk3_005_DefaultText][3400652660]
 Summon Bebe
+
+=>[mdcname_03_sk3_006_DefaultText][318930955]
+Summon Lv ■敵レベル■ Ghost
+
+=>[mdcname_03_sk3_007_DefaultText][1086387964]
+Summon Lv ■敵レベル■ Ghoul
+
+=>[mdcname_03_sk3_008_DefaultText][4272085394]
+Summon Lv ■敵レベル■ Zombie
+
+=>[mdcname_03_sk3_009_DefaultText][1298825880]
+Summon Lv ■敵レベル■ Demon
+
+=>[mdcname_03_sk3_010_DefaultText][561128113]
+Summon Lv ■敵レベル■ Gremlin
+
+=>[mdcname_03_sk3_011_DefaultText][2754736973]
+Summon Lv ■敵レベル■ Imp
 
 =>[mdcname_03_sk3_012_DefaultText][2954868356]
 Half Drain
@@ -2945,6 +3092,9 @@ Shapeshift
 
 =>[mdcname_03_sk3_018_DefaultText][4190901218]
 Sneakspeak
+
+=>[mdcname_03_sk3_019_DefaultText][867844172]
+Multiply Lv ■敵レベル■ Shadow Zed
 
 =>[mdcname_03_sk3_020_DefaultText][721977139]
 Spin Attack
@@ -3159,6 +3309,15 @@ Tail Lure
 =>[mdcname_03_sk3_090_DefaultText][3399992418]
 Cross Cut
 
+=>[mdcname_03_sk3_091_DefaultText][764496261]
+Summon Lv ■敵レベル■ Rabite
+
+=>[mdcname_03_sk3_092_DefaultText][513176251]
+Grew to Lv ■敵レベル■ Lizardon
+
+=>[mdcname_03_sk3_093_DefaultText][2006610761]
+Grew to Lv ■敵レベル■ Dragodon
+
 =>[mdcname_03_sk3_094_DefaultText][3399992418]
 Cross Cut
 
@@ -3176,6 +3335,9 @@ Whackbam
 
 =>[mdcname_03_sk3_099_DefaultText][2991173558]
 Whirlwind Spear
+
+=>[mdcname_03_sk3_100_DefaultText][1298825880]
+Summon Lv ■敵レベル■ Demon
 
 =>[mdcname_03_sk3_101_DefaultText][1003717067]
 Silenced!
@@ -8145,6 +8307,10 @@ Break your enemy's <icon_armor> (armor)!
 <btn_l_attack>: Weak Attack
 Hit your enemy with quick attacks.
 
+=>[msg_bat_cmn_tutorial005_DefaultText][1639800390]
+<btn_jump>→<btn_l_attack> or <btn_h_attack>: Aerial attack
+Knock down an enemy in the air with a jumping attack!
+
 =>[msg_bat_cmn_tutorial006_DefaultText][575308167]
 <green>Part 2</>
 <btn_avoid>: Evade
@@ -8154,6 +8320,11 @@ Get away from an enemy's attack.
 <green>Part 6</>
 Press and hold <btn_special>+<btn_special_1>: Class strike (CS gauge 100% or higher)
 Take down an enemy with a special attack.
+
+=>[msg_bat_cmn_tutorial010_DefaultText][1388792103]
+<btn_l_attack>→<btn_h_attack>: Repel Attack
+<btn_l_attack>→<btn_l_attack>→<btn_h_attack>: Area Attack
+Use a combination of attacks to defeat your enemy!
 
 =>[msg_bat_cmn_tutorial011_DefaultText][4086642723]
 Once the CS gauge is at 100% or higher, press <btn_special_1> while holding down <btn_special> to unleash a class strike.
@@ -22731,6 +22902,13 @@ If the boundary is red, you cannot escape the battle.
 
 =>[msg_tips_battle_caption002_DefaultText][540132186]
 If you hit an enemy with a power (<btn_h_attack>) or charge (press and hold <btn_h_attack>) attack, the enemy will drop particles that fill up your CS gauge.
+
+=>[msg_tips_battle_caption003_DefaultText][4200012171]
+<btn_l_attack>→<btn_h_attack>: Repel Attack
+<btn_l_attack>→<btn_l_attack>→<btn_h_attack>: Area Attack
+<btn_jump>→<btn_l_attack> or <btn_h_attack>: Aerial Attack
+
+Use a combination of attacks to defeat your enemy depending on where they are!
 
 =>[msg_tips_battle_caption004_DefaultText][2301389374]
 Be careful of armored (<icon_armor>) enemies because they can't be pushed back and attacks don't hit as hard. Use a power or charge attack to break the enemy's armor or else your attacks won't be as effective. Class strikes work, too!

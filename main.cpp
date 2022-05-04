@@ -4,11 +4,12 @@
 #include <vector>
 #include <string>
 #include <optional>
-#include <codecvt>
 #include <iostream>
 #include <set>
 
 #include <windows.h>
+
+#include <unicode/uchar.h>
 
 struct FText
 {
@@ -30,7 +31,7 @@ bool test_signature(std::array<T, S> signature, std::vector<char> const& buffer,
 
 bool good_ch(wchar_t ch)
 {
-	if (std::isprint(ch, std::locale{}))
+	if (u_isprint(ch))
 		return true;
 	if (ch == '\r')
 		return true;
@@ -52,7 +53,7 @@ bool very_good_key(std::wstring const& key)
 bool good_s(std::wstring const& s)
 {
 	for (const auto c : s)
-		if (std::isalpha(c, std::locale{}))
+		if (u_isalpha(c))
 			return true;
 	return false;
 }
