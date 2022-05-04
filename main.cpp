@@ -33,9 +33,7 @@ bool good_ch(wchar_t ch)
 {
 	if (u_isprint(ch))
 		return true;
-	if (ch == '\r')
-		return true;
-	if (ch == '\n')
+	if (u_isWhitespace(ch))
 		return true;
 	return false;
 }
