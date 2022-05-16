@@ -350,6 +350,51 @@ namespace crc32
 	}
 }
 
+void print_help()
+{
+	std::wcout
+		<< L"Extract localizable texts to locres or txt file:" << std::endl
+		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts_to_locres.txt file>" << std::endl
+		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts_to_locres.locres file>" << std::endl
+		<< LR"(Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\unpacked" "C:\MyGame\Content\Paks\texts_to_locres.locres")" << std::endl
+		<< std::endl
+
+		<< L"Covert locres to txt or backward:" << std::endl
+		<< L"UE4TextExtractor.exe <path to texts_to_locres.txt file> <path to texts_to_locres.locres file>" << std::endl
+		<< L"UE4TextExtractor.exe <path to texts_to_locres.locres file> <path to texts_to_locres.txt file>" << std::endl
+		<< LR"(Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\texts_to_locres.txt" "C:\MyGame\Content\Paks\texts_to_locres.locres")"
+	;
+}
+
+std::wstring replace_all(std::wstring s, std::wstring const& from, std::wstring const& to)
+{
+	size_t pos = 0;
+	while ((pos = s.find(from, pos)) != std::wstring::npos)
+	{
+		s.replace(pos, from.length(), to);
+		pos += from.length();
+	}
+	return s;
+}
+
+std::wstring escape_key(std::wstring key)
+{
+	key = replace_all(key, L"[", L"&#x000091;");
+	key = replace_all(key, L"]", L"&#x000093;");
+	key = replace_all(key, L"{", L"&#x000123;");
+	key = replace_all(key, L"}", L"&#x000125;");
+	return key;
+}
+
+std::wstring unescape_key(std::wstring key)
+{
+	key = replace_all(key, L"&#x000091;", L"[");
+	key = replace_all(key, L"&#x000093;", L"]");
+	key = replace_all(key, L"&#x000123;", L"{");
+	key = replace_all(key, L"&#x000125;", L"}");
+	return key;
+}
+
 int wmain(int argc, wchar_t ** argv)
 {
 	std::locale::global(std::locale{ std::locale::classic(), "en_US.UTF-8", std::locale::ctype });
@@ -359,34 +404,60 @@ int wmain(int argc, wchar_t ** argv)
 
 	if (argc < 3)
 	{
-		std::wcout
-			<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to locres.txt file>" << std::endl << std::endl
-			<< LR"(Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\unpacked" "C:\MyGame\Content\Paks\texts_to_locres.txt")" << std::endl
-		;
+		print_help();
 		return 1;
 	}
 
-	std::vector<FText> texts;
-	directory_extract(std::wstring(argv[1]), std::wstring(argv[1]), texts);
+	const auto path_left = std::filesystem::path(std::wstring(argv[1]));
+	const auto path_right = std::filesystem::path(std::wstring(argv[2]));
 
-	std::set<std::wstring> namespaces;
-	for (auto const& text : texts)
-		namespaces.insert(text.ns);
-	auto fout = std::wofstream{ std::wstring(argv[2]), std::ios::binary | std::ios::out };
-	for (auto const& ns : namespaces)
+	if (std::filesystem::is_directory(path_left))
 	{
-		fout << L"=>{" << ns << L"}" << '\r' << '\n' << '\r' << '\n';
-		std::set<std::wstring> unique_check;
-		for (auto const& text : texts)
+		std::vector<FText> texts;
+		directory_extract(path_left, path_left, texts);
+
+		if (path_right.extension() == L".txt")
 		{
-			if (text.ns != ns)
-				continue;
-			if (unique_check.find(text.key) != unique_check.end())
-				continue;
-			unique_check.insert(text.key);
-			fout << L"=>[" << text.key << L"][" << crc32::StrCrc32(text.s) << L"]" << '\r' << '\n' << text.s << '\r' << '\n' << '\r' << '\n';
+			std::set<std::wstring> namespaces;
+			for (auto const& text : texts)
+				namespaces.insert(text.ns);
+			auto fout = std::wofstream{ std::wstring(argv[2]), std::ios::binary | std::ios::out };
+			for (auto const& ns : namespaces)
+			{
+				fout << L"=>{" << escape_key(ns) << L"}" << '\r' << '\n' << '\r' << '\n';
+				std::set<std::wstring> unique_check;
+				for (auto const& text : texts)
+				{
+					if (text.ns != ns)
+						continue;
+					if (unique_check.find(text.key) != unique_check.end())
+						continue;
+					unique_check.insert(text.key);
+					fout << L"=>[" << escape_key(text.key) << L"][" << crc32::StrCrc32(text.s) << L"]" << '\r' << '\n' << text.s << '\r' << '\n' << '\r' << '\n';
+				}
+			}
+			fout << L"=>{[END]}" << '\r' << '\n';
+			return 0;
+		}
+		else if (path_right.extension() == L".locres")
+		{
+			return 0;
+		}
+		else
+		{
+			print_help();
+			return 1;
 		}
 	}
-	fout << L"=>{[END]}" << '\r' << '\n';
-	return 0;
+	else if (path_left.extension() == L".locres" && path_right.extension() == L".txt")
+	{
+		return 0;
+	}
+	else if (path_left.extension() == L".txt" && path_right.extension() == L".locres")
+	{
+		return 0;
+	}
+
+	print_help();
+	return 1;
 }
