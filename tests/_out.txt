@@ -1,3 +1,17 @@
+EMPTY_TEST 
+Extract localizable texts to locres or txt file:
+UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.locres file> [-old]
+UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.txt file>
+Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\unpacked" "C:\MyGame\Content\Paks\texts.locres"
+
+Convert locres to txt or backward:
+UE4TextExtractor.exe <path to texts.txt file> <path to texts.locres file> [-old]
+UE4TextExtractor.exe <path to texts.locres file> <path to texts.txt file>
+Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\texts.txt" "C:\MyGame\Content\Paks\texts.locres"
+
+Use -old modifier for old-version locres file generation.
+ 
+EXTRACT_TO_LOCRES_TEST 
 "01_ステージ2_0（歪んだ生態系：砂漠）_1.uexp"
 "BoneWeightMaterial.uexp"
 "CharacterDetailPanel.uexp"
@@ -14,3 +28,47 @@
 "SpaceCombatTutorialSpeechBubbles.uexp"
 "Texture2D_1.uasset"
 "UserDefinedEnum_1.uasset"
+ 
+EXTRACT_TO_OLD_LOCRES_TEST 
+"01_ステージ2_0（歪んだ生態系：砂漠）_1.uexp"
+"BoneWeightMaterial.uexp"
+"CharacterDetailPanel.uexp"
+"DataTable_1.uasset"
+"DefaultDeferredDecalMaterial.uexp"
+"Font_1.uasset"
+"Font_6.uasset"
+"GalleryObjectList.uexp"
+"GridCombatCharacterList.uexp"
+"MainMenuPawn.uexp"
+"NavigationGameMode.uexp"
+"SingleLangAllLevel_EN_US_Byblos.uexp"
+"SoundWave_1.uasset"
+"SpaceCombatTutorialSpeechBubbles.uexp"
+"Texture2D_1.uasset"
+"UserDefinedEnum_1.uasset"
+ 
+EXTRACT_TO_TXT_TEST 
+"01_ステージ2_0（歪んだ生態系：砂漠）_1.uexp"
+"BoneWeightMaterial.uexp"
+"CharacterDetailPanel.uexp"
+"DataTable_1.uasset"
+"DefaultDeferredDecalMaterial.uexp"
+"Font_1.uasset"
+"Font_6.uasset"
+"GalleryObjectList.uexp"
+"GridCombatCharacterList.uexp"
+"MainMenuPawn.uexp"
+"NavigationGameMode.uexp"
+"SingleLangAllLevel_EN_US_Byblos.uexp"
+"SoundWave_1.uasset"
+"SpaceCombatTutorialSpeechBubbles.uexp"
+"Texture2D_1.uasset"
+"UserDefinedEnum_1.uasset"
+ 
+CONVERT_LOCRES_TO_TXT_TEST 
+ 
+CONVERT_OLD_LOCRES_TO_TXT_TEST 
+ 
+CONVERT_TXT_TO_LOCRES_TEST 
+ 
+CONVERT_TXT_TO_OLD_LOCRES_TEST 
