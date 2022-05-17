@@ -6,6 +6,7 @@
 #include <optional>
 #include <iostream>
 #include <set>
+#include <map>
 
 #include <windows.h>
 
@@ -182,7 +183,7 @@ std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& 
 					return std::nullopt;
 				s += ch;
 			}
-			index += length + 2;
+			index += length * 2;
 			return s;
 		}
 		else
@@ -354,15 +355,18 @@ void print_help()
 {
 	std::wcout
 		<< L"Extract localizable texts to locres or txt file:" << std::endl
-		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts_to_locres.txt file>" << std::endl
-		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts_to_locres.locres file>" << std::endl
-		<< LR"(Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\unpacked" "C:\MyGame\Content\Paks\texts_to_locres.locres")" << std::endl
+		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.locres file> [-old]" << std::endl
+		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.txt file>" << std::endl
+		<< LR"(Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\unpacked" "C:\MyGame\Content\Paks\texts.locres")" << std::endl
 		<< std::endl
 
-		<< L"Covert locres to txt or backward:" << std::endl
-		<< L"UE4TextExtractor.exe <path to texts_to_locres.txt file> <path to texts_to_locres.locres file>" << std::endl
-		<< L"UE4TextExtractor.exe <path to texts_to_locres.locres file> <path to texts_to_locres.txt file>" << std::endl
-		<< LR"(Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\texts_to_locres.txt" "C:\MyGame\Content\Paks\texts_to_locres.locres")"
+		<< L"Convert locres to txt or backward:" << std::endl
+		<< L"UE4TextExtractor.exe <path to texts.txt file> <path to texts.locres file> [-old]" << std::endl
+		<< L"UE4TextExtractor.exe <path to texts.locres file> <path to texts.txt file>" << std::endl
+		<< LR"(Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\texts.txt" "C:\MyGame\Content\Paks\texts.locres")" << std::endl
+		<< std::endl
+
+		<< L"Use -old modifier for old-version locres file generation." << std::endl
 	;
 }
 
@@ -395,6 +399,131 @@ std::wstring unescape_key(std::wstring key)
 	return key;
 }
 
+struct FEntry
+{
+	std::wstring key;
+	uint32_t hash;
+	std::wstring s;
+};
+
+using locres_vector = std::vector<std::pair<std::wstring, std::vector<FEntry>>>;
+
+static const auto magic = std::vector<unsigned char>{
+	0x75, 0x74, 0x14, 0x0E, 0xFC, 0x03, 0x4A, 0x67, 0x9D, 0x90, 0x15, 0x4A, 0x1B, 0x7F, 0x37, 0xC3
+};
+
+void write_to_txt_file(locres_vector const& lv, std::filesystem::path file)
+{
+	auto fout = std::wofstream{ file, std::ios::binary | std::ios::out };
+	for (auto const& ns : lv)
+	{
+		fout << L"=>{" << escape_key(ns.first) << L"}" << '\r' << '\n' << '\r' << '\n';
+		for (auto const& text : ns.second)
+			fout << L"=>[" << escape_key(text.key) << L"][" << text.hash << L"]" << '\r' << '\n' << text.s << '\r' << '\n' << '\r' << '\n';
+	}
+	fout << L"=>{[END]}" << '\r' << '\n';
+}
+
+void write_to_locres_file(bool old, locres_vector const& lv, std::filesystem::path file)
+{
+	auto fout = std::ofstream{ file, std::ios::binary | std::ios::out };
+
+	std::streampos strings_array_offset_placeholder_offset;
+
+	if (!old)
+	{
+		fout.write(reinterpret_cast<const char*>(magic.data()), magic.size());
+
+		const uint8_t version = 1;
+		fout.write(reinterpret_cast<const char*>(&version), sizeof(uint8_t));
+
+		const int64_t strings_array_offset_placeholder = 0;
+		strings_array_offset_placeholder_offset = fout.tellp();
+		fout.write(reinterpret_cast<const char*>(&strings_array_offset_placeholder), sizeof(int64_t));
+	}
+
+	const uint32_t namespace_count = static_cast<const uint32_t>(lv.size());
+	fout.write(reinterpret_cast<const char*>(&namespace_count), sizeof(uint32_t));
+
+	std::vector<std::wstring> strings;
+	std::map<std::wstring, int32_t> strings_map;
+
+	const auto write_string = [&] (std::wstring s) {
+		if (s.length() == 0)
+		{
+			const int32_t length = 0;
+			fout.write(reinterpret_cast<const char*>(&length), sizeof(int32_t));
+			return;
+		}
+		bool need_unicode = false;
+		for (auto const& c : s)
+			if (!(0x00 <= c && c <= 0x7F))
+			{
+				need_unicode = true;
+				break;
+			}
+		if (need_unicode)
+		{
+			const int32_t length = -static_cast<int32_t>(s.length()) - 1;
+			fout.write(reinterpret_cast<const char*>(&length), sizeof(int32_t));
+			fout.write(reinterpret_cast<const char*>(s.c_str()), s.length() * 2);
+			const uint16_t zero = 0;
+			fout.write(reinterpret_cast<const char*>(&zero), sizeof(uint16_t));
+		}
+		else
+		{
+			const int32_t length = static_cast<int32_t>(s.length()) + 1;
+			fout.write(reinterpret_cast<const char*>(&length), sizeof(int32_t));
+			for (auto const& c : s)
+				fout.write(reinterpret_cast<const char*>(&c), sizeof(char));
+			const uint8_t zero = 0;
+			fout.write(reinterpret_cast<const char*>(&zero), sizeof(uint8_t));
+		}
+	};
+
+	for (auto const& ns : lv)
+	{
+		write_string(ns.first);
+		const uint32_t key_count = static_cast<const uint32_t>(ns.second.size());
+		fout.write(reinterpret_cast<const char*>(&key_count), sizeof(uint32_t));
+		for (auto const& text : ns.second)
+		{
+			write_string(text.key);
+			fout.write(reinterpret_cast<const char*>(&text.hash), sizeof(uint32_t));
+			if (!old)
+			{
+				int32_t index = 0;
+				if (const auto it = strings_map.find(text.s); it == strings_map.end())
+				{
+					index = static_cast<int32_t>(strings.size());
+					strings_map.emplace(text.s, index);
+					strings.push_back(text.s);
+				}
+				else
+				{
+					index = it->second;
+				}
+				fout.write(reinterpret_cast<const char*>(&index), sizeof(int32_t));
+			}
+			else
+			{
+				write_string(text.s);
+			}
+		}
+	}
+
+	if (!old)
+	{
+		const int64_t strings_array_offset = fout.tellp();
+		const uint32_t strings_array_count = static_cast<uint32_t>(strings.size());
+		fout.write(reinterpret_cast<const char*>(&strings_array_count), sizeof(uint32_t));
+		for (auto const& s : strings)
+			write_string(s);
+		fout.seekp(strings_array_offset_placeholder_offset);
+		fout.write(reinterpret_cast<const char*>(&strings_array_offset), sizeof(int64_t));
+	}
+}
+
 int wmain(int argc, wchar_t ** argv)
 {
 	std::locale::global(std::locale{ std::locale::classic(), "en_US.UTF-8", std::locale::ctype });
@@ -410,37 +539,41 @@ int wmain(int argc, wchar_t ** argv)
 
 	const auto path_left = std::filesystem::path(std::wstring(argv[1]));
 	const auto path_right = std::filesystem::path(std::wstring(argv[2]));
+	const auto old = (3 < argc && std::wstring(argv[3]) == L"-old");
 
 	if (std::filesystem::is_directory(path_left))
 	{
 		std::vector<FText> texts;
 		directory_extract(path_left, path_left, texts);
+		std::set<std::wstring> namespaces;
+		for (auto const& text : texts)
+			namespaces.insert(text.ns);
+		locres_vector lv;
+		lv.reserve(namespaces.size());
+		for (auto const& ns : namespaces)
+		{
+			lv.emplace_back();
+			lv.back().first = ns;
+			std::set<std::wstring> unique_check;
+			for (auto const& text : texts)
+			{
+				if (text.ns != ns)
+					continue;
+				if (unique_check.find(text.key) != unique_check.end())
+					continue;
+				unique_check.insert(text.key);
+				lv.back().second.push_back(FEntry{ text.key, crc32::StrCrc32(text.s), text.s });
+			}
+		}
 
 		if (path_right.extension() == L".txt")
 		{
-			std::set<std::wstring> namespaces;
-			for (auto const& text : texts)
-				namespaces.insert(text.ns);
-			auto fout = std::wofstream{ std::wstring(argv[2]), std::ios::binary | std::ios::out };
-			for (auto const& ns : namespaces)
-			{
-				fout << L"=>{" << escape_key(ns) << L"}" << '\r' << '\n' << '\r' << '\n';
-				std::set<std::wstring> unique_check;
-				for (auto const& text : texts)
-				{
-					if (text.ns != ns)
-						continue;
-					if (unique_check.find(text.key) != unique_check.end())
-						continue;
-					unique_check.insert(text.key);
-					fout << L"=>[" << escape_key(text.key) << L"][" << crc32::StrCrc32(text.s) << L"]" << '\r' << '\n' << text.s << '\r' << '\n' << '\r' << '\n';
-				}
-			}
-			fout << L"=>{[END]}" << '\r' << '\n';
+			write_to_txt_file(lv, path_right);
 			return 0;
 		}
 		else if (path_right.extension() == L".locres")
 		{
+			write_to_locres_file(old, lv, path_right);
 			return 0;
 		}
 		else
@@ -451,10 +584,186 @@ int wmain(int argc, wchar_t ** argv)
 	}
 	else if (path_left.extension() == L".locres" && path_right.extension() == L".txt")
 	{
+		auto fin = std::ifstream{ path_left, std::ios::binary | std::ios::ate };
+		auto buffer = std::vector<char>(fin.tellg());
+		fin.seekg(0, std::ios::beg);
+		fin.read(buffer.data(), buffer.size());
+
+		uint8_t version = 0;
+		size_t index = 0;
+
+		if (magic.size() <= buffer.size())
+		{
+			bool found = true;
+			for (size_t i = 0; i < magic.size(); ++i)
+				if (static_cast<unsigned char>(buffer[i]) != magic[i])
+				{
+					found = false;
+					break;
+				}
+			if (found)
+			{
+				index += magic.size();
+				version = *reinterpret_cast<const uint8_t*>(buffer.data() + index);
+				index += sizeof(uint8_t);
+			}
+		}
+
+		if (!(0 <= version && version <= 3))
+		{
+			std::wcout << L"ERROR: LocRes format too new!";
+			return 1;
+		}
+
+		const auto read_string = [&] () -> std::wstring {
+			auto length = *reinterpret_cast<const int*>(buffer.data() + index);
+			index += 4;
+			if (length == 0)
+				return L"";
+			if (length < 0)
+			{
+				length = -length;
+				std::wstring s;
+				for (size_t i = index; i < index + 2 * length - 2; i += 2)
+				{
+					const auto ch = *reinterpret_cast<const wchar_t*>(buffer.data() + i);
+					s += ch;
+				}
+				index += length * 2;
+				return s;
+			}
+			else
+			{
+				std::wstring s;
+				for (size_t i = index; i < index + length - 1; ++i)
+				{
+					const auto ch = buffer[i];
+					s += ch;
+				}
+				index += length;
+				return s;
+			}
+		};
+
+		std::vector<std::wstring> strings;
+
+		if (1 <= version)
+		{
+			const auto strings_array_offset = *reinterpret_cast<const int64_t*>(buffer.data() + index);
+			index += sizeof(int64_t);
+
+			const auto restore_index_point = index;
+
+			index = strings_array_offset;
+
+			const auto strings_array_count = *reinterpret_cast<const uint32_t*>(buffer.data() + index);
+			index += sizeof(uint32_t);
+
+			strings.reserve(strings_array_count);
+
+			for (size_t i = 0; i < strings_array_count; ++i)
+			{
+				strings.push_back(read_string());
+				if (2 <= version)
+					index += sizeof(int32_t);
+			}
+
+			index = restore_index_point;
+		}
+
+		if (2 <= version)
+			index += sizeof(uint32_t);
+
+		const auto namespace_count = *reinterpret_cast<const uint32_t*>(buffer.data() + index);
+		index += sizeof(uint32_t);
+
+		locres_vector lv;
+		lv.reserve(namespace_count);
+
+		for (size_t i = 0; i < namespace_count; ++i)
+		{
+			if (version == 2 || version == 3)
+				index += sizeof(uint32_t);
+			const auto ns = read_string();
+
+			const auto key_count = *reinterpret_cast<const uint32_t*>(buffer.data() + index);
+			index += sizeof(uint32_t);
+
+			lv.emplace_back();
+			lv.back().first = ns;
+			lv.back().second.reserve(key_count);
+
+			for (size_t j = 0; j < key_count; ++j)
+			{
+				if (version == 2 || version == 3)
+					index += sizeof(uint32_t);
+
+				const auto key = read_string();
+
+				const auto hash = *reinterpret_cast<const uint32_t*>(buffer.data() + index);
+				index += sizeof(uint32_t);
+
+				std::wstring str;
+				if (1 <= version)
+				{
+					const auto str_index = *reinterpret_cast<const int32_t*>(buffer.data() + index);
+					index += sizeof(int32_t);
+					str = strings[str_index];
+				}
+				else
+				{
+					str = read_string();
+				}
+
+				lv.back().second.push_back(FEntry{ key, hash, str });
+			}
+		}
+
+		write_to_txt_file(lv, path_right);
+
 		return 0;
 	}
 	else if (path_left.extension() == L".txt" && path_right.extension() == L".locres")
 	{
+		locres_vector lv;
+
+		auto fin = std::wifstream{ path_left, std::ios::binary | std::ios::in };
+
+		std::wstring line;
+		int mode = 0;
+		while (std::getline(fin, line))
+		{
+			if (5 < line.length() && line.substr(0, 3) == L"=>[")
+			{
+				if (mode == 1)
+					lv.back().second.back().s = lv.back().second.back().s.substr(0, lv.back().second.back().s.length() - 4);
+
+				line = line.substr(3);
+				const auto key = unescape_key(line.substr(0, line.find(L"]")));
+				line = line.substr(line.find(L"[") + 1);
+				const auto hash = std::stoul(line.substr(0, line.find(L"]")));
+				lv.back().second.push_back(FEntry{ key, hash, L"" });
+				mode = 1;
+				continue;
+			}
+			if (3 < line.length() && line.substr(0, 3) == L"=>{")
+			{
+				if (mode == 1)
+					lv.back().second.back().s = lv.back().second.back().s.substr(0, lv.back().second.back().s.length() - 4);
+
+				const auto ns = unescape_key(line.substr(3, line.find(L"}") - 3));
+				if (ns == L"[END]")
+					break;
+				lv.emplace_back();
+				lv.back().first = ns;
+				mode = 0;
+				continue;
+			}
+			if (mode == 1)
+				lv.back().second.back().s += line + L"\n";
+		}
+
+		write_to_locres_file(old, lv, path_right);
 		return 0;
 	}
 
