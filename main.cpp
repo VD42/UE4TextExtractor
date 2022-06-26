@@ -160,7 +160,7 @@ std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& 
 	const auto read_string = [&] () -> std::optional<std::wstring> {
 		if (buffer.size() < index + 4)
 			return std::nullopt;
-		auto length = *reinterpret_cast<const int*>(buffer.data() + index);
+		auto length = static_cast<int64_t>(*reinterpret_cast<const int*>(buffer.data() + index));
 		index += 4;
 		if (length == 0)
 			return L"";
@@ -616,7 +616,7 @@ int wmain(int argc, wchar_t ** argv)
 		}
 
 		const auto read_string = [&] () -> std::wstring {
-			auto length = *reinterpret_cast<const int*>(buffer.data() + index);
+			auto length = static_cast<int64_t>(*reinterpret_cast<const int*>(buffer.data() + index));
 			index += 4;
 			if (length == 0)
 				return L"";
