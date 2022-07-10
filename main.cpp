@@ -229,9 +229,12 @@ std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& 
 
 	const auto current_index = index;
 
-	const auto impostor_check = read_string();
-	if (impostor_check.has_value() && 0 < impostor_check->size())
-		return std::nullopt;
+	if (!very_good_key(key.value()))
+	{
+		const auto impostor_check = read_string();
+		if (impostor_check.has_value() && 0 < impostor_check->size())
+			return std::nullopt;
+	}
 
 	return std::pair{ FText{ ns.value(), key.value(), s.value() }, current_index };
 }
