@@ -32,9 +32,9 @@ bool test_signature(std::array<T, S> signature, std::vector<char> const& buffer,
 
 bool good_ch(wchar_t ch)
 {
-	if (u_isprint(ch))
+	if (U_MASK(u_charType(ch)) & (~U_GC_C_MASK | U_GC_CF_MASK | U_GC_CS_MASK)) // all categories but controls + format controls and surrogate controls
 		return true;
-	if (u_isWhitespace(ch))
+	if (0x09 <= ch && ch <= 0x0d || 0x1c <= ch && ch <= 0x1f) // some ISO format controls
 		return true;
 	return false;
 }
@@ -123,7 +123,7 @@ std::optional<std::pair<FText, size_t>> try_read_blueprint_text(std::vector<char
 		return std::nullopt;
 	if (128 < key->size())   // static const int32 InlineStringSize = 128;
 		return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
-	if (!very_good_key(key.value()) && !good_s(s.value()))
+	if (!very_good_key(key.value()) && !good_s(s.value())) // nothing to translate actually - probably not a string for translation
 		return std::nullopt;
 	const auto ns = read_to_null();
 	if (!ns.has_value())
@@ -224,7 +224,7 @@ std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& 
 		return std::nullopt;
 	if (s->size() == 0)
 		return std::nullopt;
-	if (!very_good_key(key.value()) && !good_s(s.value()))
+	if (!very_good_key(key.value()) && !good_s(s.value())) // nothing to translate actually - probably not a string for translation
 		return std::nullopt;
 
 	const auto current_index = index;
