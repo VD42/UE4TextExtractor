@@ -59,7 +59,7 @@ bool good_s(std::wstring const& s)
 
 std::optional<std::pair<FText, size_t>> try_read_blueprint_text(std::vector<char> const& buffer, size_t index)
 {
-	constexpr std::array<char, 2> BLUEPRINT_TEXT_SIGNATURE = { 0x29, 0x01 };
+	constexpr std::array<char, 2> BLUEPRINT_TEXT_SIGNATURE = { 0x29, 0x01 }; // EX_TextConst, EBlueprintTextLiteralType::LocalizedText
 
 	if (!test_signature(BLUEPRINT_TEXT_SIGNATURE, buffer, index))
 		return std::nullopt;
@@ -70,7 +70,7 @@ std::optional<std::pair<FText, size_t>> try_read_blueprint_text(std::vector<char
 		if (buffer.size() <= index)
 			return std::nullopt;
 
-		if (buffer[index] == 0x1F) // ANSI
+		if (buffer[index] == 0x1F) // ANSI (EX_StringConst)
 		{
 			std::wstring s;
 			for (++index; index < buffer.size(); ++index)
@@ -88,7 +88,7 @@ std::optional<std::pair<FText, size_t>> try_read_blueprint_text(std::vector<char
 			return std::nullopt;
 		}
 
-		if (buffer[index] == 0x34) // UTF-16
+		if (buffer[index] == 0x34) // UTF-16 (EX_UnicodeStringConst)
 		{
 			std::wstring s;
 			for (++index; index < buffer.size(); index += 2)
@@ -239,6 +239,106 @@ std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& 
 	return std::pair{ FText{ ns.value(), key.value(), s.value() }, current_index };
 }
 
+std::optional<std::pair<std::vector<FText>, size_t>> try_read_string_table(std::vector<char> const& buffer, size_t index)
+{
+	if (buffer.size() < index + 12)
+		return std::nullopt;
+
+	const auto read_string = [&] () -> std::optional<std::wstring> {
+		if (buffer.size() < index + 4)
+			return std::nullopt;
+		auto length = static_cast<int64_t>(*reinterpret_cast<const int*>(buffer.data() + index));
+		index += 4;
+		if (length == 0)
+			return L"";
+		if (length < 0)
+		{
+			length = -length;
+			if (buffer.size() < index + 2 * length)
+				return std::nullopt;
+			if (buffer[index + 2 * length - 2] != 0)
+				return std::nullopt;
+			if (buffer[index + 2 * length - 1] != 0)
+				return std::nullopt;
+			std::wstring s;
+			for (size_t i = index; i < index + 2 * length - 2; i += 2)
+			{
+				const auto ch = *reinterpret_cast<const wchar_t*>(buffer.data() + i);
+				if (ch == 0)
+					return std::nullopt;
+				if (!good_ch(ch))
+					return std::nullopt;
+				s += ch;
+			}
+			index += length * 2;
+			return s;
+		}
+		else
+		{
+			if (buffer.size() < index + length)
+				return std::nullopt;
+			if (buffer[index + length - 1] != 0)
+				return std::nullopt;
+			std::wstring s;
+			for (size_t i = index; i < index + length - 1; ++i)
+			{
+				const auto ch = buffer[i];
+				if (ch == 0)
+					return std::nullopt;
+				if (!good_ch(ch))
+					return std::nullopt;
+				s += ch;
+			}
+			index += length;
+			return s;
+		}
+	};
+
+	const auto ns = read_string();
+	if (!ns.has_value())
+		return std::nullopt;
+	if (128 < ns->size())    // static const int32 InlineStringSize = 128;
+		return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
+
+	if (buffer.size() < index + 8)
+		return std::nullopt;
+
+	const auto size = *reinterpret_cast<const int*>(buffer.data() + index);
+	index += 4;
+	if (size < 1)
+		return std::nullopt;
+
+	std::vector<FText> table;
+
+	// size maybe very large
+	//table.reserve(size);
+
+	for (size_t i = 0; i < size; ++i)
+	{
+		const auto key = read_string();
+		if (!key.has_value())
+			return std::nullopt;
+		if (key->size() == 0)
+			return std::nullopt;
+		if (128 < key->size())   // static const int32 InlineStringSize = 128;
+			return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
+		const auto s = read_string();
+		if (!s.has_value())
+			return std::nullopt;
+		table.push_back(FText{ ns.value(), key.value(), s.value() });
+	}
+
+	if (buffer.size() < index + 4)
+		return std::nullopt;
+
+	const auto metadata_size = *reinterpret_cast<const int*>(buffer.data() + index);
+	index += 4;
+	if (metadata_size < 0)
+		return std::nullopt;
+
+	return std::pair{ std::move(table), index };
+}
+
 void file_extract(std::filesystem::path root, std::filesystem::path file, std::vector<FText> & texts)
 {
 	if (!(file.extension() == ".uasset" || file.extension() == ".uexp" || file.extension() == ".umap"))
@@ -252,19 +352,33 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 	fin.read(buffer.data(), buffer.size());
 	for (size_t i = 0; i < buffer.size(); ++i)
 	{
-		auto text = try_read_blueprint_text(buffer, i);
-		if (text.has_value())
 		{
-			texts.push_back(text.value().first);
-			i = text.value().second - 1;
-			continue;
+			const auto text = try_read_blueprint_text(buffer, i);
+			if (text.has_value())
+			{
+				texts.push_back(text.value().first);
+				i = text.value().second - 1;
+				continue;
+			}
 		}
-		text = try_read_ftext(buffer, i);
-		if (text.has_value())
 		{
-			texts.push_back(text.value().first);
-			i = text.value().second - 1;
-			continue;
+			const auto text = try_read_ftext(buffer, i);
+			if (text.has_value())
+			{
+				texts.push_back(text.value().first);
+				i = text.value().second - 1;
+				continue;
+			}
+		}
+		{
+			const auto table = try_read_string_table(buffer, i);
+			if (table.has_value())
+			{
+				for (auto const& text : table.value().first)
+					texts.push_back(text);
+				i = table.value().second - 1;
+				continue;
+			}
 		}
 	}
 }
