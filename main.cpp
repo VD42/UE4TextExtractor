@@ -49,7 +49,15 @@ bool very_good_key(std::wstring const& key)
 	return true;
 }
 
-bool good_s(std::wstring const& s)
+bool all_white_spaces(std::wstring const& s)
+{
+	for (const auto c : s)
+		if (!u_isspace(c))
+			return false;
+	return true;
+}
+
+bool has_letter(std::wstring const& s)
 {
 	for (const auto c : s)
 		if (u_isalpha(c))
@@ -123,13 +131,20 @@ std::optional<std::pair<FText, size_t>> try_read_blueprint_text(std::vector<char
 		return std::nullopt;
 	if (128 < key->size())   // static const int32 InlineStringSize = 128;
 		return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
-	if (!very_good_key(key.value()) && !good_s(s.value())) // nothing to translate actually - probably not a string for translation
+	if (all_white_spaces(s.value()))
 		return std::nullopt;
 	const auto ns = read_to_null();
 	if (!ns.has_value())
 		return std::nullopt;
 	if (128 < ns->size())    // static const int32 InlineStringSize = 128;
 		return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
+	int good_score = 0;
+	if (very_good_key(key.value()))
+		good_score += 10;
+	if (has_letter(s.value()))
+		good_score += 5;
+	if (good_score < 5)
+		return std::nullopt;
 
 	return std::pair{ FText{ ns.value(), key.value(), s.value() }, index };
 }
@@ -149,6 +164,12 @@ std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& 
 		return std::nullopt;
 
 	if (flag & 0b00010000) // InitializedFromString = (1 << 4) never set in cooked text
+		return std::nullopt;
+
+	if (flag & 0b00000010) // ShouldGatherForLocalization: no CultureInvariant
+		return std::nullopt;
+
+	if (flag & 0b00000001) // ShouldGatherForLocalization: no Transient
 		return std::nullopt;
 
 	const auto history = *reinterpret_cast<const char*>(buffer.data() + index);
@@ -224,17 +245,25 @@ std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& 
 		return std::nullopt;
 	if (s->size() == 0)
 		return std::nullopt;
-	if (!very_good_key(key.value()) && !good_s(s.value())) // nothing to translate actually - probably not a string for translation
+	if (all_white_spaces(s.value()))
 		return std::nullopt;
 
-	const auto current_index = index;
+	int good_score = 0;
+	if (very_good_key(key.value()))
+		good_score += 10;
+	if (has_letter(s.value()))
+		good_score += 5;
 
-	if (!very_good_key(key.value()))
+	const auto current_index = index;
+	if (good_score < 15)
 	{
 		const auto impostor_check = read_string();
 		if (impostor_check.has_value() && 0 < impostor_check->size())
-			return std::nullopt;
+			good_score -= 10;
 	}
+
+	if (good_score < 5)
+		return std::nullopt;
 
 	return std::pair{ FText{ ns.value(), key.value(), s.value() }, current_index };
 }
@@ -313,6 +342,8 @@ std::optional<std::pair<std::vector<FText>, size_t>> try_read_string_table(std::
 	// size maybe very large
 	//table.reserve(size);
 
+	int good_score = 0;
+
 	for (size_t i = 0; i < size; ++i)
 	{
 		const auto key = read_string();
@@ -325,8 +356,22 @@ std::optional<std::pair<std::vector<FText>, size_t>> try_read_string_table(std::
 		const auto s = read_string();
 		if (!s.has_value())
 			return std::nullopt;
+		if (s->size() == 0)
+		{
+			good_score -= 2;
+			continue;
+		}
+		if (all_white_spaces(s.value()))
+		{
+			good_score -= 1;
+			continue;
+		}
 		table.push_back(FText{ ns.value(), key.value(), s.value() });
+		good_score += 2;
 	}
+
+	if (good_score < 0)
+		return std::nullopt;
 
 	if (buffer.size() < index + 4)
 		return std::nullopt;
