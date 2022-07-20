@@ -397,27 +397,27 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 	fin.seekg(0, std::ios::beg);
 	fin.read(buffer.data(), buffer.size());
 
-	bool has_script_struct = false;
+	bool has_blueprint = false;
 	bool has_text_property = false;
 	bool has_string_table = false;
 
-	constexpr std::array<char, 12> SCRIPT_STRUCT_SIGNATURE = { 'S', 'c', 'r', 'i', 'p', 't', 'S', 't', 'r', 'u', 'c', 't' };
+	constexpr std::array<char, 23> BLUEPRINT_SIGNATURE = { 'B', 'l', 'u', 'e', 'p', 'r', 'i', 'n' , 't', 'G', 'e', 'n', 'e', 'r', 'a', 't', 'e', 'd', 'C', 'l', 'a', 's', 's' };
 	constexpr std::array<char, 12> TEXT_PROPERTY_SIGNATURE = { 'T', 'e', 'x', 't', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'y' };
 	constexpr std::array<char, 11> STRING_TABLE_SIGNATURE = { 'S', 't', 'r', 'i', 'n', 'g', 'T', 'a', 'b', 'l', 'e' };
 
 	for (size_t i = 0; i < buffer.size(); ++i)
 	{
-		if (!has_script_struct && test_signature(SCRIPT_STRUCT_SIGNATURE, buffer, i))
-			has_script_struct = true;
+		if (!has_blueprint && test_signature(BLUEPRINT_SIGNATURE, buffer, i))
+			has_blueprint = true;
 		if (!has_text_property && test_signature(TEXT_PROPERTY_SIGNATURE, buffer, i))
 			has_text_property = true;
 		if (!has_string_table && test_signature(STRING_TABLE_SIGNATURE, buffer, i))
 			has_string_table = true;
-		if (has_script_struct && has_text_property && has_string_table)
+		if (has_blueprint && has_text_property && has_string_table)
 			break;
 	}
 
-	if (!(has_script_struct || has_text_property || has_string_table))
+	if (!(has_blueprint || has_text_property || has_string_table))
 		return;
 
 	if (std::filesystem::exists(file.replace_extension(L".uexp")))
@@ -430,7 +430,7 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 
 	for (size_t i = 0; i < buffer.size(); ++i)
 	{
-		if (has_script_struct)
+		if (has_blueprint)
 		{
 			const auto text = try_read_blueprint_text(buffer, i);
 			if (text.has_value())
