@@ -386,7 +386,7 @@ std::optional<std::pair<std::vector<FText>, size_t>> try_read_string_table(std::
 
 void file_extract(std::filesystem::path root, std::filesystem::path file, std::vector<FText> & texts)
 {
-	if (!(file.extension() == ".uasset" || file.extension() == ".uexp" || file.extension() == ".umap"))
+	if (!(file.extension() == L".uasset" || file.extension() == L".umap"))
 		return;
 
 	std::wcout << std::filesystem::relative(file, root) << std::endl;
@@ -395,8 +395,41 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 	auto buffer = std::vector<char>(fin.tellg());
 	fin.seekg(0, std::ios::beg);
 	fin.read(buffer.data(), buffer.size());
+
+	bool has_script_struct = false;
+	bool has_text_property = false;
+	bool has_string_table = false;
+
+	constexpr std::array<char, 12> SCRIPT_STRUCT_SIGNATURE = { 'S', 'c', 'r', 'i', 'p', 't', 'S', 't', 'r', 'u', 'c', 't' };
+	constexpr std::array<char, 12> TEXT_PROPERTY_SIGNATURE = { 'T', 'e', 'x', 't', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'y' };
+	constexpr std::array<char, 11> STRING_TABLE_SIGNATURE = { 'S', 't', 'r', 'i', 'n', 'g', 'T', 'a', 'b', 'l', 'e' };
+
 	for (size_t i = 0; i < buffer.size(); ++i)
 	{
+		if (!has_script_struct && test_signature(SCRIPT_STRUCT_SIGNATURE, buffer, i))
+			has_script_struct = true;
+		if (!has_text_property && test_signature(TEXT_PROPERTY_SIGNATURE, buffer, i))
+			has_text_property = true;
+		if (!has_string_table && test_signature(STRING_TABLE_SIGNATURE, buffer, i))
+			has_string_table = true;
+		if (has_script_struct && has_text_property && has_string_table)
+			break;
+	}
+
+	if (!(has_script_struct || has_text_property || has_string_table))
+		return;
+
+	if (std::filesystem::exists(file.replace_extension(L".uexp")))
+	{
+		fin = std::ifstream{ file, std::ios::binary | std::ios::ate };
+		buffer = std::vector<char>(fin.tellg());
+		fin.seekg(0, std::ios::beg);
+		fin.read(buffer.data(), buffer.size());
+	}
+
+	for (size_t i = 0; i < buffer.size(); ++i)
+	{
+		if (has_script_struct)
 		{
 			const auto text = try_read_blueprint_text(buffer, i);
 			if (text.has_value())
@@ -406,6 +439,7 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 				continue;
 			}
 		}
+		if (has_text_property)
 		{
 			const auto text = try_read_ftext(buffer, i);
 			if (text.has_value())
@@ -415,6 +449,7 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 				continue;
 			}
 		}
+		if (has_string_table)
 		{
 			const auto table = try_read_string_table(buffer, i);
 			if (table.has_value())
