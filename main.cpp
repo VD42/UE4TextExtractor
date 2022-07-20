@@ -166,8 +166,9 @@ std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& 
 	if (flag & 0b00010000) // InitializedFromString = (1 << 4) never set in cooked text
 		return std::nullopt;
 
-	if (flag & 0b00000010) // ShouldGatherForLocalization: no CultureInvariant
-		return std::nullopt;
+	// Strange, but some probably localizable text using this flag
+	//if (flag & 0b00000010) // ShouldGatherForLocalization: no CultureInvariant
+	//	return std::nullopt;
 
 	if (flag & 0b00000001) // ShouldGatherForLocalization: no Transient
 		return std::nullopt;
