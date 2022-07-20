@@ -256,11 +256,11 @@ std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& 
 		good_score += 5;
 
 	const auto current_index = index;
-	if (good_score < 15)
+	if (good_score < 10)
 	{
 		const auto impostor_check = read_string();
 		if (impostor_check.has_value() && 0 < impostor_check->size())
-			good_score -= 10;
+			good_score -= 5;
 	}
 
 	if (good_score < 5)
