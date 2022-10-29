@@ -7,6 +7,8 @@
 #include <iostream>
 #include <set>
 #include <map>
+#include <codecvt>
+#include <sstream>
 
 #include <windows.h>
 
@@ -612,14 +614,20 @@ static const auto magic = std::vector<unsigned char>{
 
 void write_to_txt_file(locres_vector const& lv, std::filesystem::path file)
 {
-	auto fout = std::wofstream{ file, std::ios::binary | std::ios::out };
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+	auto fout = std::ofstream{ file, std::ios::binary | std::ios::out };
 	for (auto const& ns : lv)
 	{
-		fout << L"=>{" << escape_key(ns.first) << L"}" << '\r' << '\n' << '\r' << '\n';
+		const auto escaped_ns = converter.to_bytes(escape_key(ns.first));
+		fout << "=>{" << escaped_ns << "}" << '\r' << '\n' << '\r' << '\n';
 		for (auto const& text : ns.second)
-			fout << L"=>[" << escape_key(text.key) << L"][" << text.hash << L"]" << '\r' << '\n' << text.s << '\r' << '\n' << '\r' << '\n';
+		{
+			const auto escaped_key = converter.to_bytes(escape_key(text.key));
+			const auto s = converter.to_bytes(text.s);
+			fout << "=>[" << escaped_key << "][" << text.hash << "]" << '\r' << '\n' << s << '\r' << '\n' << '\r' << '\n';
+		}
 	}
-	fout << L"=>{[END]}" << '\r' << '\n';
+	fout << "=>{[END]}" << '\r' << '\n' << std::flush;
 }
 
 void write_to_locres_file(bool old, locres_vector const& lv, std::filesystem::path file)
@@ -925,11 +933,18 @@ int wmain(int argc, wchar_t ** argv)
 	{
 		locres_vector lv;
 
-		auto fin = std::wifstream{ path_left, std::ios::binary | std::ios::in };
+		auto fin = std::ifstream{ path_left, std::ios::binary | std::ios::ate };
+		auto buffer = std::vector<char>(fin.tellg());
+		fin.seekg(0, std::ios::beg);
+		fin.read(buffer.data(), buffer.size());
+
+		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+		std::wstring lines = converter.from_bytes(buffer.data());
+		auto stream = std::wstringstream{ lines };
 
 		std::wstring line;
 		int mode = 0;
-		while (std::getline(fin, line))
+		while (std::getline(stream, line))
 		{
 			if (5 < line.length() && line.substr(0, 3) == L"=>[")
 			{
