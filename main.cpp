@@ -21,15 +21,9 @@ struct FText
 	std::wstring s;
 };
 
-template <class T, size_t S>
-bool test_signature(std::array<T, S> signature, std::vector<char> const& buffer, size_t index)
+inline bool test_signature(std::string_view const& signature, std::vector<char> const& buffer, size_t index)
 {
-	if (buffer.size() < index + signature.size())
-		return false;
-	for (size_t i = 0; i < signature.size(); ++i)
-		if (buffer[index + i] != signature[i])
-			return false;
-	return true;
+	return std::string_view(buffer.data() + index, buffer.size() - index).starts_with(signature);
 }
 
 bool good_ch(wchar_t ch)
@@ -69,7 +63,7 @@ bool has_letter(std::wstring const& s)
 
 std::optional<std::pair<FText, size_t>> try_read_blueprint_text(std::vector<char> const& buffer, size_t index)
 {
-	constexpr std::array<char, 2> BLUEPRINT_TEXT_SIGNATURE = { 0x29, 0x01 }; // EX_TextConst, EBlueprintTextLiteralType::LocalizedText
+	constexpr std::string_view BLUEPRINT_TEXT_SIGNATURE = "\x29\x01"; // EX_TextConst, EBlueprintTextLiteralType::LocalizedText
 
 	if (!test_signature(BLUEPRINT_TEXT_SIGNATURE, buffer, index))
 		return std::nullopt;
@@ -271,6 +265,84 @@ std::optional<std::pair<FText, size_t>> try_read_ftext(std::vector<char> const& 
 	return std::pair{ FText{ ns.value(), key.value(), s.value() }, current_index };
 }
 
+std::optional<std::pair<FText, size_t>> try_read_very_good_raw_text(std::vector<char> const& buffer, size_t index)
+{
+	const auto read_string = [&] () -> std::optional<std::wstring> {
+		if (buffer.size() < index + 4)
+			return std::nullopt;
+		auto length = static_cast<int64_t>(*reinterpret_cast<const int*>(buffer.data() + index));
+		index += 4;
+		if (length == 0)
+			return L"";
+		if (length < 0)
+		{
+			length = -length;
+			if (buffer.size() < index + 2 * length)
+				return std::nullopt;
+			if (buffer[index + 2 * length - 2] != 0)
+				return std::nullopt;
+			if (buffer[index + 2 * length - 1] != 0)
+				return std::nullopt;
+			std::wstring s;
+			for (size_t i = index; i < index + 2 * length - 2; i += 2)
+			{
+				const auto ch = *reinterpret_cast<const wchar_t*>(buffer.data() + i);
+				if (ch == 0)
+					return std::nullopt;
+				if (!good_ch(ch))
+					return std::nullopt;
+				s += ch;
+			}
+			index += length * 2;
+			return s;
+		}
+		else
+		{
+			if (buffer.size() < index + length)
+				return std::nullopt;
+			if (buffer[index + length - 1] != 0)
+				return std::nullopt;
+			std::wstring s;
+			for (size_t i = index; i < index + length - 1; ++i)
+			{
+				const auto ch = buffer[i];
+				if (ch == 0)
+					return std::nullopt;
+				if (!good_ch(ch))
+					return std::nullopt;
+				s += ch;
+			}
+			index += length;
+			return s;
+		}
+	};
+
+	const auto ns = read_string();
+	if (!ns.has_value())
+		return std::nullopt;
+	if (128 < ns->size())    // static const int32 InlineStringSize = 128;
+		return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
+	if (ns->size() != 0)
+		return std::nullopt; // only empty namespaces supported!
+	const auto key = read_string();
+	if (!key.has_value())
+		return std::nullopt;
+	if (key->size() == 0)
+		return std::nullopt;
+	if (128 < key->size())   // static const int32 InlineStringSize = 128;
+		return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
+	if (!very_good_key(key.value()))
+		return std::nullopt; // only very good keys supported!
+	const auto s = read_string();
+	if (!s.has_value())
+		return std::nullopt;
+	if (s->size() == 0)
+		return std::nullopt;
+	if (all_white_spaces(s.value()))
+		return std::nullopt;
+	return std::pair{ FText{ ns.value(), key.value(), s.value() }, index };
+}
+
 std::optional<std::pair<std::vector<FText>, size_t>> try_read_string_table(std::vector<char> const& buffer, size_t index)
 {
 	if (buffer.size() < index + 12)
@@ -387,7 +459,7 @@ std::optional<std::pair<std::vector<FText>, size_t>> try_read_string_table(std::
 	return std::pair{ std::move(table), index };
 }
 
-void file_extract(std::filesystem::path root, std::filesystem::path file, std::vector<FText> & texts)
+void file_extract(std::filesystem::path root, std::filesystem::path file, std::vector<std::string> const& raw_text_signatures, std::vector<FText> & texts)
 {
 	if (!(file.extension() == L".uasset" || file.extension() == L".umap"))
 		return;
@@ -402,10 +474,11 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 	bool has_blueprint = false;
 	bool has_text_property = false;
 	bool has_string_table = false;
+	bool has_very_good_raw_text = false;
 
-	constexpr std::array<char, 23> BLUEPRINT_SIGNATURE = { 'B', 'l', 'u', 'e', 'p', 'r', 'i', 'n' , 't', 'G', 'e', 'n', 'e', 'r', 'a', 't', 'e', 'd', 'C', 'l', 'a', 's', 's' };
-	constexpr std::array<char, 12> TEXT_PROPERTY_SIGNATURE = { 'T', 'e', 'x', 't', 'P', 'r', 'o', 'p', 'e', 'r', 't', 'y' };
-	constexpr std::array<char, 11> STRING_TABLE_SIGNATURE = { 'S', 't', 'r', 'i', 'n', 'g', 'T', 'a', 'b', 'l', 'e' };
+	constexpr std::string_view BLUEPRINT_SIGNATURE = "BlueprintGeneratedClass";
+	constexpr std::string_view TEXT_PROPERTY_SIGNATURE = "TextProperty";
+	constexpr std::string_view STRING_TABLE_SIGNATURE = "StringTable";
 
 	for (size_t i = 0; i < buffer.size(); ++i)
 	{
@@ -415,11 +488,20 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 			has_text_property = true;
 		if (!has_string_table && test_signature(STRING_TABLE_SIGNATURE, buffer, i))
 			has_string_table = true;
-		if (has_blueprint && has_text_property && has_string_table)
+		if (0 < raw_text_signatures.size() && !has_very_good_raw_text)
+		{
+			for (auto const& raw_text_signature : raw_text_signatures)
+				if (test_signature(raw_text_signature, buffer, i))
+				{
+					has_very_good_raw_text = true;
+					break;
+				}
+		}
+		if (has_blueprint && has_text_property && has_string_table && (raw_text_signatures.size() == 0 || has_very_good_raw_text))
 			break;
 	}
 
-	if (!(has_blueprint || has_text_property || has_string_table))
+	if (!(has_blueprint || has_text_property || has_string_table || has_very_good_raw_text))
 		return;
 
 	if (std::filesystem::exists(file.replace_extension(L".uexp")))
@@ -434,8 +516,7 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 	{
 		if (has_blueprint)
 		{
-			const auto text = try_read_blueprint_text(buffer, i);
-			if (text.has_value())
+			if (const auto text = try_read_blueprint_text(buffer, i); text.has_value())
 			{
 				texts.push_back(text.value().first);
 				i = text.value().second - 1;
@@ -444,8 +525,7 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 		}
 		if (has_text_property)
 		{
-			const auto text = try_read_ftext(buffer, i);
-			if (text.has_value())
+			if (const auto text = try_read_ftext(buffer, i); text.has_value())
 			{
 				texts.push_back(text.value().first);
 				i = text.value().second - 1;
@@ -454,8 +534,7 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 		}
 		if (has_string_table)
 		{
-			const auto table = try_read_string_table(buffer, i);
-			if (table.has_value())
+			if (const auto table = try_read_string_table(buffer, i); table.has_value())
 			{
 				for (auto const& text : table.value().first)
 					texts.push_back(text);
@@ -463,17 +542,26 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 				continue;
 			}
 		}
+		if (has_very_good_raw_text)
+		{
+			if (const auto text = try_read_very_good_raw_text(buffer, i); text.has_value())
+			{
+				texts.push_back(text.value().first);
+				i = text.value().second - 1;
+				continue;
+			}
+		}
 	}
 }
 
-void directory_extract(std::filesystem::path root, std::filesystem::path directory, std::vector<FText> & texts)
+void directory_extract(std::filesystem::path root, std::filesystem::path directory, std::vector<std::string> const& raw_text_signatures, std::vector<FText> & texts)
 {
 	for (auto const& entry : std::filesystem::directory_iterator(directory))
 	{
 		if (entry.is_directory())
-			directory_extract(root, entry, texts);
+			directory_extract(root, entry, raw_text_signatures, texts);
 		else
-			file_extract(root, entry, texts);
+			file_extract(root, entry, raw_text_signatures, texts);
 	}
 }
 
@@ -555,8 +643,8 @@ void print_help()
 {
 	std::wcout
 		<< L"Extract localizable texts to locres or txt file:" << std::endl
-		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.locres file> [-old]" << std::endl
-		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.txt file>" << std::endl
+		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.locres file> [-old] [-raw-text-signatures=<signature1>,<signature2>,...]" << std::endl
+		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.txt file> [-raw-text-signatures=<signature1>,<signature2>,...]" << std::endl
 		<< LR"(Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\unpacked" "C:\MyGame\Content\Paks\texts.locres")" << std::endl
 		<< std::endl
 
@@ -583,6 +671,8 @@ std::wstring replace_all(std::wstring s, std::wstring const& from, std::wstring 
 
 std::wstring escape_key(std::wstring key)
 {
+	key = replace_all(key, L"\r", L"&#x000013;");
+	key = replace_all(key, L"\n", L"&#x000010;");
 	key = replace_all(key, L"[", L"&#x000091;");
 	key = replace_all(key, L"]", L"&#x000093;");
 	key = replace_all(key, L"{", L"&#x000123;");
@@ -592,6 +682,8 @@ std::wstring escape_key(std::wstring key)
 
 std::wstring unescape_key(std::wstring key)
 {
+	key = replace_all(key, L"&#x000013;", L"\r");
+	key = replace_all(key, L"&#x000010;", L"\n");
 	key = replace_all(key, L"&#x000091;", L"[");
 	key = replace_all(key, L"&#x000093;", L"]");
 	key = replace_all(key, L"&#x000123;", L"{");
@@ -737,20 +829,57 @@ int wmain(int argc, wchar_t ** argv)
 	SetConsoleOutputCP(CP_UTF8);
 	SetConsoleCP(CP_UTF8);
 
-	if (argc < 3)
+	std::vector<std::wstring_view> args;
+	for (size_t i = 0; i < argc; ++i)
+		args.emplace_back(argv[i]);
+
+	if (args.size() < 3)
 	{
 		print_help();
 		return 1;
 	}
 
-	const auto path_left = std::filesystem::path(std::wstring(argv[1]));
-	const auto path_right = std::filesystem::path(std::wstring(argv[2]));
-	const auto old = (3 < argc && std::wstring(argv[3]) == L"-old");
+	constexpr std::wstring_view old_argument = L"-old";
+	constexpr std::wstring_view raw_text_signatures_argument = L"-raw-text-signatures=";
+
+	const auto path_left = std::filesystem::path(args[1]);
+	const auto path_right = std::filesystem::path(args[2]);
+	bool old = false;
+	std::vector<std::string> raw_text_signatures;
+
+	for (size_t i = 3; i < args.size(); ++i)
+	{
+		if (args[i] == old_argument)
+		{
+			old = true;
+			continue;
+		}
+		if (args[i].starts_with(raw_text_signatures_argument))
+		{
+			const auto wtos = [] (std::wstring_view const& s) {
+				std::string result;
+				for (auto c : s)
+					result += static_cast<char>(c);
+				return result;
+			};
+			auto raw_text_signatures_value = args[i];
+			raw_text_signatures_value.remove_prefix(raw_text_signatures_argument.size());
+			size_t pos = -1;
+			while ((pos = raw_text_signatures_value.find(L",")) != std::wstring_view::npos)
+			{
+				raw_text_signatures.push_back(wtos(raw_text_signatures_value.substr(0, pos)));
+				raw_text_signatures_value.remove_prefix(pos + 1);
+			}
+			if (0 < raw_text_signatures_value.size())
+				raw_text_signatures.push_back(wtos(raw_text_signatures_value));
+			continue;
+		}
+	}
 
 	if (std::filesystem::is_directory(path_left))
 	{
 		std::vector<FText> texts;
-		directory_extract(path_left, path_left, texts);
+		directory_extract(path_left, path_left, raw_text_signatures, texts);
 		std::set<std::wstring> namespaces;
 		for (auto const& text : texts)
 			namespaces.insert(text.ns);
