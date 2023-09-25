@@ -648,6 +648,9 @@ void print_help()
 		<< LR"(Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\unpacked" "C:\MyGame\Content\Paks\texts.locres")" << std::endl
 		<< std::endl
 
+		<< L"Use -raw-text-signatures=<signature1>,<signature2>,... modifier for parsing localizable text by custom signatures. See also: https://github.com/VD42/UE4TextExtractor/blob/master/RAW_TEXT_SIGNATURES.md." << std::endl
+		<< std::endl
+
 		<< L"Convert locres to txt or backward:" << std::endl
 		<< L"UE4TextExtractor.exe <path to texts.txt file> <path to texts.locres file> [-old]" << std::endl
 		<< L"UE4TextExtractor.exe <path to texts.locres file> <path to texts.txt file>" << std::endl
