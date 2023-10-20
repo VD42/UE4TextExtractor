@@ -459,14 +459,28 @@ std::optional<std::pair<std::vector<FText>, size_t>> try_read_string_table(std::
 	return std::pair{ std::move(table), index };
 }
 
-void file_extract(std::filesystem::path root, std::filesystem::path file, std::vector<std::string> const& raw_text_signatures, std::vector<FText> & texts)
+void file_extract(std::filesystem::path root, std::filesystem::path file, std::vector<std::string> const& raw_text_signatures, bool all_uexps, std::vector<FText> & texts)
 {
-	if (!(file.extension() == L".uasset" || file.extension() == L".umap"))
+	if (!(file.extension() == L".uasset" || file.extension() == L".umap" || all_uexps && file.extension() == L".uexp"))
 		return;
+
+	const auto replace_extension = [&] (std::filesystem::path const& ext) {
+		auto copy = file;
+		return copy.replace_extension(ext);
+	};
+
+	if (file.extension() == L".uexp")
+	{
+		if (std::filesystem::exists(replace_extension(L".uasset")) || std::filesystem::exists(replace_extension(L".umap")))
+			return;
+	}
 
 	std::wcout << std::filesystem::relative(file, root) << std::endl;
 
 	auto fin = std::ifstream{ file, std::ios::binary | std::ios::ate };
+	if (fin.fail())
+		return;
+
 	auto buffer = std::vector<char>(fin.tellg());
 	fin.seekg(0, std::ios::beg);
 	fin.read(buffer.data(), buffer.size());
@@ -476,40 +490,53 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 	bool has_string_table = false;
 	bool has_very_good_raw_text = false;
 
-	constexpr std::string_view BLUEPRINT_SIGNATURE = "BlueprintGeneratedClass";
-	constexpr std::string_view TEXT_PROPERTY_SIGNATURE = "TextProperty";
-	constexpr std::string_view STRING_TABLE_SIGNATURE = "StringTable";
-
-	for (size_t i = 0; i < buffer.size(); ++i)
+	if (file.extension() == L".uasset" || file.extension() == L".umap")
 	{
-		if (!has_blueprint && test_signature(BLUEPRINT_SIGNATURE, buffer, i))
-			has_blueprint = true;
-		if (!has_text_property && test_signature(TEXT_PROPERTY_SIGNATURE, buffer, i))
-			has_text_property = true;
-		if (!has_string_table && test_signature(STRING_TABLE_SIGNATURE, buffer, i))
-			has_string_table = true;
-		if (0 < raw_text_signatures.size() && !has_very_good_raw_text)
+		constexpr std::string_view BLUEPRINT_SIGNATURE = "BlueprintGeneratedClass";
+		constexpr std::string_view TEXT_PROPERTY_SIGNATURE = "TextProperty";
+		constexpr std::string_view STRING_TABLE_SIGNATURE = "StringTable";
+
+		for (size_t i = 0; i < buffer.size(); ++i)
 		{
-			for (auto const& raw_text_signature : raw_text_signatures)
-				if (test_signature(raw_text_signature, buffer, i))
-				{
-					has_very_good_raw_text = true;
-					break;
-				}
+			if (!has_blueprint && test_signature(BLUEPRINT_SIGNATURE, buffer, i))
+				has_blueprint = true;
+			if (!has_text_property && test_signature(TEXT_PROPERTY_SIGNATURE, buffer, i))
+				has_text_property = true;
+			if (!has_string_table && test_signature(STRING_TABLE_SIGNATURE, buffer, i))
+				has_string_table = true;
+			if (0 < raw_text_signatures.size() && !has_very_good_raw_text)
+			{
+				for (auto const& raw_text_signature : raw_text_signatures)
+					if (test_signature(raw_text_signature, buffer, i))
+					{
+						has_very_good_raw_text = true;
+						break;
+					}
+			}
+			if (has_blueprint && has_text_property && has_string_table && (raw_text_signatures.size() == 0 || has_very_good_raw_text))
+				break;
 		}
-		if (has_blueprint && has_text_property && has_string_table && (raw_text_signatures.size() == 0 || has_very_good_raw_text))
-			break;
+
+		if (!(has_blueprint || has_text_property || has_string_table || has_very_good_raw_text))
+			return;
+
+		if (const auto uexp_file = replace_extension(L".uexp"); std::filesystem::exists(uexp_file))
+		{
+			fin = std::ifstream{ uexp_file, std::ios::binary | std::ios::ate };
+			if (fin.fail())
+				return;
+			buffer = std::vector<char>(fin.tellg());
+			fin.seekg(0, std::ios::beg);
+			fin.read(buffer.data(), buffer.size());
+		}
 	}
-
-	if (!(has_blueprint || has_text_property || has_string_table || has_very_good_raw_text))
-		return;
-
-	if (std::filesystem::exists(file.replace_extension(L".uexp")))
+	else
 	{
-		fin = std::ifstream{ file, std::ios::binary | std::ios::ate };
-		buffer = std::vector<char>(fin.tellg());
-		fin.seekg(0, std::ios::beg);
-		fin.read(buffer.data(), buffer.size());
+		has_blueprint = true;
+		has_text_property = true;
+		has_string_table = true;
+		if (0 < raw_text_signatures.size())
+			has_very_good_raw_text = true;
 	}
 
 	for (size_t i = 0; i < buffer.size(); ++i)
@@ -554,14 +581,14 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 	}
 }
 
-void directory_extract(std::filesystem::path root, std::filesystem::path directory, std::vector<std::string> const& raw_text_signatures, std::vector<FText> & texts)
+void directory_extract(std::filesystem::path root, std::filesystem::path directory, std::vector<std::string> const& raw_text_signatures, bool all_uexps, std::vector<FText> & texts)
 {
 	for (auto const& entry : std::filesystem::directory_iterator(directory))
 	{
 		if (entry.is_directory())
-			directory_extract(root, entry, raw_text_signatures, texts);
+			directory_extract(root, entry, raw_text_signatures, all_uexps, texts);
 		else
-			file_extract(root, entry, raw_text_signatures, texts);
+			file_extract(root, entry, raw_text_signatures, all_uexps, texts);
 	}
 }
 
@@ -643,12 +670,13 @@ void print_help()
 {
 	std::wcout
 		<< L"Extract localizable texts to locres or txt file:" << std::endl
-		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.locres file> [-old] [-raw-text-signatures=<signature1>,<signature2>,...]" << std::endl
-		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.txt file> [-raw-text-signatures=<signature1>,<signature2>,...]" << std::endl
+		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.locres file> [-old] [-raw-text-signatures=<signature1>,<signature2>,...] [-all-uexps]" << std::endl
+		<< L"UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.txt file> [-raw-text-signatures=<signature1>,<signature2>,...] [-all-uexps]" << std::endl
 		<< LR"(Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\unpacked" "C:\MyGame\Content\Paks\texts.locres")" << std::endl
 		<< std::endl
 
 		<< L"Use -raw-text-signatures=<signature1>,<signature2>,... modifier for parsing localizable text by custom signatures. See also: https://github.com/VD42/UE4TextExtractor/blob/master/RAW_TEXT_SIGNATURES.md." << std::endl
+		<< L"Use -all-uexps modifier for additionaly parsing uexp files without matching uasset or umap files." << std::endl
 		<< std::endl
 
 		<< L"Convert locres to txt or backward:" << std::endl
@@ -844,10 +872,12 @@ int wmain(int argc, wchar_t ** argv)
 
 	constexpr std::wstring_view old_argument = L"-old";
 	constexpr std::wstring_view raw_text_signatures_argument = L"-raw-text-signatures=";
+	constexpr std::wstring_view all_uexps_argument = L"-all-uexps";
 
 	const auto path_left = std::filesystem::path(args[1]);
 	const auto path_right = std::filesystem::path(args[2]);
 	bool old = false;
+	bool all_uexps = false;
 	std::vector<std::string> raw_text_signatures;
 
 	for (size_t i = 3; i < args.size(); ++i)
@@ -855,6 +885,11 @@ int wmain(int argc, wchar_t ** argv)
 		if (args[i] == old_argument)
 		{
 			old = true;
+			continue;
+		}
+		if (args[i] == all_uexps_argument)
+		{
+			all_uexps = true;
 			continue;
 		}
 		if (args[i].starts_with(raw_text_signatures_argument))
@@ -882,7 +917,7 @@ int wmain(int argc, wchar_t ** argv)
 	if (std::filesystem::is_directory(path_left))
 	{
 		std::vector<FText> texts;
-		directory_extract(path_left, path_left, raw_text_signatures, texts);
+		directory_extract(path_left, path_left, raw_text_signatures, all_uexps, texts);
 		std::set<std::wstring> namespaces;
 		for (auto const& text : texts)
 			namespaces.insert(text.ns);

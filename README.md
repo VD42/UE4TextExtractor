@@ -10,6 +10,7 @@ Extract localizable texts to locres or txt file:
 Example: `UE4TextExtractor.exe "C:\MyGame\Content\Paks\unpacked" "C:\MyGame\Content\Paks\texts.locres"`  
   
 Use `-raw-text-signatures=<signature1>,<signature2>,...` modifier for parsing localizable text by custom signatures. See also: [here](https://github.com/VD42/UE4TextExtractor/blob/master/RAW_TEXT_SIGNATURES.md).  
+Use `-all-uexps` modifier for additionaly parsing uexp files without matching uasset or umap files.  
   
 Convert locres to txt or backward:  
 `UE4TextExtractor.exe <path to texts.txt file> <path to texts.locres file> [-old]`  
