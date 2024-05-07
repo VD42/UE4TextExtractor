@@ -490,6 +490,9 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 	bool has_string_table = false;
 	bool has_very_good_raw_text = false;
 
+	if (raw_text_signatures.size() == 1 && raw_text_signatures.back() == "all")
+		has_very_good_raw_text = true;
+
 	if (file.extension() == L".uasset" || file.extension() == L".umap")
 	{
 		constexpr std::string_view BLUEPRINT_SIGNATURE = "BlueprintGeneratedClass";
