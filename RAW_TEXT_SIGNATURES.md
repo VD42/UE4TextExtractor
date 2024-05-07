@@ -1,5 +1,14 @@
 # Custom raw text signatures
 
+### What if I don't want to read or understand anything?
+
+Use `-raw-text-signatures=all` modifier:  
+  
+`UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.locres file> [-old] -raw-text-signatures=all`  
+`UE4TextExtractor.exe <path to folder with extracted from pak files> <path to texts.txt file> -raw-text-signatures=all`  
+  
+But it's highly not recommended, and it's still better to read what's written below.
+
 ### Why would I want to do that?
 
 If you have files that contain something very similar to localizable text:
