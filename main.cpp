@@ -19,6 +19,8 @@ struct FText
 	std::wstring ns;
 	std::wstring key;
 	std::wstring s;
+
+	std::wstring src;
 };
 
 inline bool test_signature(std::string_view const& signature, std::vector<char> const& buffer, size_t index)
@@ -475,7 +477,9 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 			return;
 	}
 
-	std::wcout << std::filesystem::relative(file, root) << std::endl;
+	std::wstring src = std::filesystem::relative(file, root);
+
+	std::wcout << src << std::endl;
 
 	auto fin = std::ifstream{ file, std::ios::binary | std::ios::ate };
 	if (fin.fail())
@@ -525,6 +529,8 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 
 		if (const auto uexp_file = replace_extension(L".uexp"); std::filesystem::exists(uexp_file))
 		{
+			src = std::filesystem::relative(uexp_file, root);
+
 			fin = std::ifstream{ uexp_file, std::ios::binary | std::ios::ate };
 			if (fin.fail())
 				return;
@@ -549,6 +555,7 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 			if (const auto text = try_read_blueprint_text(buffer, i); text.has_value())
 			{
 				texts.push_back(text.value().first);
+				texts.back().src = src;
 				i = text.value().second - 1;
 				continue;
 			}
@@ -558,6 +565,7 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 			if (const auto text = try_read_ftext(buffer, i); text.has_value())
 			{
 				texts.push_back(text.value().first);
+				texts.back().src = src;
 				i = text.value().second - 1;
 				continue;
 			}
@@ -567,7 +575,10 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 			if (const auto table = try_read_string_table(buffer, i); table.has_value())
 			{
 				for (auto const& text : table.value().first)
+				{
 					texts.push_back(text);
+					texts.back().src = src;
+				}
 				i = table.value().second - 1;
 				continue;
 			}
@@ -577,6 +588,7 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 			if (const auto text = try_read_very_good_raw_text(buffer, i); text.has_value())
 			{
 				texts.push_back(text.value().first);
+				texts.back().src = src;
 				i = text.value().second - 1;
 				continue;
 			}
@@ -730,6 +742,8 @@ struct FEntry
 	std::wstring key;
 	uint32_t hash;
 	std::wstring s;
+
+	std::wstring src;
 };
 
 using locres_vector = std::vector<std::pair<std::wstring, std::vector<FEntry>>>;
@@ -738,16 +752,23 @@ static const auto magic = std::vector<unsigned char>{
 	0x0E, 0x14, 0x74, 0x75, 0x67, 0x4A, 0x03, 0xFC, 0x4A, 0x15, 0x90, 0x9D, 0xC3, 0x37, 0x7F, 0x1B
 };
 
-void write_to_txt_file(locres_vector const& lv, std::filesystem::path file)
+void write_to_txt_file(locres_vector const& lv, std::filesystem::path file, bool src)
 {
 	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 	auto fout = std::ofstream{ file, std::ios::binary | std::ios::out };
+	std::wstring last_src = L"";
 	for (auto const& ns : lv)
 	{
 		const auto escaped_ns = converter.to_bytes(escape_key(ns.first));
 		fout << "=>{" << escaped_ns << "}" << '\r' << '\n' << '\r' << '\n';
 		for (auto const& text : ns.second)
 		{
+			if (src && text.src != last_src)
+			{
+				const auto src_comment = converter.to_bytes(text.src);
+				fout << "=># " << src_comment << '\r' << '\n' << '\r' << '\n';
+				last_src = text.src;
+			}
 			const auto escaped_key = converter.to_bytes(escape_key(text.key));
 			const auto s = converter.to_bytes(text.s);
 			fout << "=>[" << escaped_key << "][" << text.hash << "]" << '\r' << '\n' << s << '\r' << '\n' << '\r' << '\n';
@@ -876,12 +897,14 @@ int wmain(int argc, wchar_t ** argv)
 	constexpr std::wstring_view old_argument = L"-old";
 	constexpr std::wstring_view raw_text_signatures_argument = L"-raw-text-signatures=";
 	constexpr std::wstring_view all_uexps_argument = L"-all-uexps";
+	constexpr std::wstring_view src_argument = L"-src";
 
 	const auto path_left = std::filesystem::path(args[1]);
 	const auto path_right = std::filesystem::path(args[2]);
 	bool old = false;
 	bool all_uexps = false;
 	std::vector<std::string> raw_text_signatures;
+	bool src = false;
 
 	for (size_t i = 3; i < args.size(); ++i)
 	{
@@ -893,6 +916,11 @@ int wmain(int argc, wchar_t ** argv)
 		if (args[i] == all_uexps_argument)
 		{
 			all_uexps = true;
+			continue;
+		}
+		if (args[i] == src_argument)
+		{
+			src = true;
 			continue;
 		}
 		if (args[i].starts_with(raw_text_signatures_argument))
@@ -938,13 +966,13 @@ int wmain(int argc, wchar_t ** argv)
 				if (unique_check.find(text.key) != unique_check.end())
 					continue;
 				unique_check.insert(text.key);
-				lv.back().second.push_back(FEntry{ text.key, crc32::StrCrc32(text.s), text.s });
+				lv.back().second.push_back(FEntry{ text.key, crc32::StrCrc32(text.s), text.s, text.src });
 			}
 		}
 
 		if (path_right.extension() == L".txt")
 		{
-			write_to_txt_file(lv, path_right);
+			write_to_txt_file(lv, path_right, src);
 			return 0;
 		}
 		else if (path_right.extension() == L".locres")
@@ -1095,7 +1123,7 @@ int wmain(int argc, wchar_t ** argv)
 			}
 		}
 
-		write_to_txt_file(lv, path_right);
+		write_to_txt_file(lv, path_right, false);
 
 		return 0;
 	}
@@ -1116,6 +1144,14 @@ int wmain(int argc, wchar_t ** argv)
 		int mode = 0;
 		while (std::getline(stream, line))
 		{
+			if (4 < line.length() && line.substr(0, 4) == L"=># ")
+			{
+				if (mode == 1)
+					lv.back().second.back().s = lv.back().second.back().s.substr(0, lv.back().second.back().s.length() - 4);
+
+				mode = 0;
+				continue;
+			}
 			if (5 < line.length() && line.substr(0, 3) == L"=>[")
 			{
 				if (mode == 1)
