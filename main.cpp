@@ -499,7 +499,7 @@ void file_extract(std::filesystem::path root, std::filesystem::path file, std::v
 
 	if (file.extension() == L".uasset" || file.extension() == L".umap")
 	{
-		constexpr std::string_view BLUEPRINT_SIGNATURE = "BlueprintGeneratedClass";
+		constexpr std::string_view BLUEPRINT_SIGNATURE = "Blueprint";
 		constexpr std::string_view TEXT_PROPERTY_SIGNATURE = "TextProperty";
 		constexpr std::string_view STRING_TABLE_SIGNATURE = "StringTable";
 
