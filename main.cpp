@@ -702,6 +702,12 @@ void print_help()
 		<< std::endl
 
 		<< L"Use -old modifier for old-version locres file generation." << std::endl
+		<< std::endl
+
+		<< L"Add or replace all texts from one txt to another:" << std::endl
+		<< L"UE4TextExtractor.exe <path to source_texts.txt file> <path to destination_texts.txt file>" << std::endl
+		<< LR"(Example: UE4TextExtractor.exe "C:\MyGame\Content\Paks\en_texts.txt" "C:\MyGame\Content\Paks\cn_texts.txt")" << std::endl
+		<< std::endl
 	;
 }
 
@@ -749,9 +755,63 @@ struct FEntry
 
 using locres_vector = std::vector<std::pair<std::wstring, std::vector<FEntry>>>;
 
-static const auto magic = std::vector<unsigned char>{
-	0x0E, 0x14, 0x74, 0x75, 0x67, 0x4A, 0x03, 0xFC, 0x4A, 0x15, 0x90, 0x9D, 0xC3, 0x37, 0x7F, 0x1B
-};
+locres_vector read_txt_file(std::filesystem::path file)
+{
+	locres_vector lv;
+
+	auto fin = std::ifstream{ file, std::ios::binary | std::ios::ate };
+	auto buffer = std::vector<char>(static_cast<size_t>(fin.tellg()) + 1);
+	fin.seekg(0, std::ios::beg);
+	fin.read(buffer.data(), buffer.size() - 1);
+
+	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+	std::wstring lines = converter.from_bytes(buffer.data());
+	auto stream = std::wstringstream{ lines };
+
+	std::wstring line;
+	int mode = 0;
+	while (std::getline(stream, line))
+	{
+		if (4 < line.length() && line.substr(0, 4) == L"=># ")
+		{
+			if (mode == 1)
+				lv.back().second.back().s = lv.back().second.back().s.substr(0, lv.back().second.back().s.length() - 4);
+
+			mode = 0;
+			continue;
+		}
+		if (5 < line.length() && line.substr(0, 3) == L"=>[")
+		{
+			if (mode == 1)
+				lv.back().second.back().s = lv.back().second.back().s.substr(0, lv.back().second.back().s.length() - 4);
+
+			line = line.substr(3);
+			const auto key = unescape_key(line.substr(0, line.find(L"]")));
+			line = line.substr(line.find(L"[") + 1);
+			const auto hash = std::stoul(line.substr(0, line.find(L"]")));
+			lv.back().second.push_back(FEntry{ key, hash, L"" });
+			mode = 1;
+			continue;
+		}
+		if (3 < line.length() && line.substr(0, 3) == L"=>{")
+		{
+			if (mode == 1)
+				lv.back().second.back().s = lv.back().second.back().s.substr(0, lv.back().second.back().s.length() - 4);
+
+			const auto ns = unescape_key(line.substr(3, line.find(L"}") - 3));
+			if (ns == L"[END]")
+				break;
+			lv.emplace_back();
+			lv.back().first = ns;
+			mode = 0;
+			continue;
+		}
+		if (mode == 1)
+			lv.back().second.back().s += line + L"\n";
+	}
+
+	return lv;
+}
 
 void write_to_txt_file(locres_vector const& lv, std::filesystem::path file, bool src)
 {
@@ -777,6 +837,10 @@ void write_to_txt_file(locres_vector const& lv, std::filesystem::path file, bool
 	}
 	fout << "=>{[END]}" << '\r' << '\n' << std::flush;
 }
+
+static const auto magic = std::vector<unsigned char>{
+	0x0E, 0x14, 0x74, 0x75, 0x67, 0x4A, 0x03, 0xFC, 0x4A, 0x15, 0x90, 0x9D, 0xC3, 0x37, 0x7F, 0x1B
+};
 
 void write_to_locres_file(bool old, locres_vector const& lv, std::filesystem::path file)
 {
@@ -1130,60 +1194,39 @@ int wmain(int argc, wchar_t ** argv)
 	}
 	else if (path_left.extension() == L".txt" && path_right.extension() == L".locres")
 	{
-		locres_vector lv;
+		const auto lv = read_txt_file(path_left);
+		write_to_locres_file(old, lv, path_right);
+		return 0;
+	}
+	else if (path_left.extension() == L".txt" && path_right.extension() == L".txt")
+	{
+		const auto lv_src = read_txt_file(path_left);
+		auto lv = read_txt_file(path_right);
 
-		auto fin = std::ifstream{ path_left, std::ios::binary | std::ios::ate };
-		auto buffer = std::vector<char>(fin.tellg());
-		fin.seekg(0, std::ios::beg);
-		fin.read(buffer.data(), buffer.size());
-
-		std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-		std::wstring lines = converter.from_bytes(buffer.data());
-		auto stream = std::wstringstream{ lines };
-
-		std::wstring line;
-		int mode = 0;
-		while (std::getline(stream, line))
+		for (auto const& ns_src : lv_src)
 		{
-			if (4 < line.length() && line.substr(0, 4) == L"=># ")
-			{
-				if (mode == 1)
-					lv.back().second.back().s = lv.back().second.back().s.substr(0, lv.back().second.back().s.length() - 4);
+			auto & ns = [&] () -> std::pair<std::wstring, std::vector<FEntry>> & {
+				for (auto & ns_dst : lv)
+					if (ns_dst.first == ns_src.first)
+						return ns_dst;
+				lv.emplace_back(ns_src.first, std::vector<FEntry>{});
+				return lv.back();
+			}();
 
-				mode = 0;
-				continue;
-			}
-			if (5 < line.length() && line.substr(0, 3) == L"=>[")
+			for (auto const& text_src : ns_src.second)
 			{
-				if (mode == 1)
-					lv.back().second.back().s = lv.back().second.back().s.substr(0, lv.back().second.back().s.length() - 4);
-
-				line = line.substr(3);
-				const auto key = unescape_key(line.substr(0, line.find(L"]")));
-				line = line.substr(line.find(L"[") + 1);
-				const auto hash = std::stoul(line.substr(0, line.find(L"]")));
-				lv.back().second.push_back(FEntry{ key, hash, L"" });
-				mode = 1;
-				continue;
+				auto & text = [&] () -> FEntry & {
+					for (auto & text_dst : ns.second)
+						if (text_dst.key == text_src.key && text_dst.hash == text_src.hash)
+							return text_dst;
+					ns.second.emplace_back(FEntry{ text_src.key, text_src.hash });
+					return ns.second.back();
+				}();
+				text.s = text_src.s;
 			}
-			if (3 < line.length() && line.substr(0, 3) == L"=>{")
-			{
-				if (mode == 1)
-					lv.back().second.back().s = lv.back().second.back().s.substr(0, lv.back().second.back().s.length() - 4);
-
-				const auto ns = unescape_key(line.substr(3, line.find(L"}") - 3));
-				if (ns == L"[END]")
-					break;
-				lv.emplace_back();
-				lv.back().first = ns;
-				mode = 0;
-				continue;
-			}
-			if (mode == 1)
-				lv.back().second.back().s += line + L"\n";
 		}
 
-		write_to_locres_file(old, lv, path_right);
+		write_to_txt_file(lv, path_right, false);
 		return 0;
 	}
 

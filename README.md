@@ -18,4 +18,8 @@ Convert locres to txt or backward:
 `UE4TextExtractor.exe <path to texts.locres file> <path to texts.txt file>`  
 Example: `UE4TextExtractor.exe "C:\MyGame\Content\Paks\texts.txt" "C:\MyGame\Content\Paks\texts.locres" -old`  
   
-Use `-old` modifier for old-version locres file generation.
+Use `-old` modifier for old-version locres file generation.  
+  
+Add or replace all texts from one txt to another:  
+`UE4TextExtractor.exe <path to source_texts.txt file> <path to destination_texts.txt file>`  
+Example: `UE4TextExtractor.exe "C:\MyGame\Content\Paks\en_texts.txt" "C:\MyGame\Content\Paks\cn_texts.txt"`
