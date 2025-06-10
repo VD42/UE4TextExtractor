@@ -427,7 +427,17 @@ std::optional<std::pair<std::vector<FText>, size_t>> try_read_string_table(std::
 		if (!key.has_value())
 			return std::nullopt;
 		if (key->size() == 0)
-			return std::nullopt;
+		{
+			// sometimes happened, read string and ignore
+			const auto s = read_string();
+			if (!s.has_value())
+				return std::nullopt;
+			if (s->size() == 0)
+				good_score -= 2;
+			else
+				good_score -= 1000; // no key but with string? looking bad
+			continue;
+		}
 		if (128 < key->size())   // static const int32 InlineStringSize = 128;
 			return std::nullopt; // UE_CLOG(SaveNum > InlineStringSize, LogTextKey, VeryVerbose, TEXT("Key string '%s' was larger (%d) than the inline size (%d) and caused an allocation!"), OutStrBuffer.GetData(), SaveNum, InlineStringSize);
 		const auto s = read_string();
