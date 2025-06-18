@@ -1088,11 +1088,14 @@ int wmain(int argc, wchar_t ** argv)
 			}
 		}
 
-		if (!(0 <= version && version <= 3))
+		if (!(0 <= version && version <= 4))
 		{
-			std::wcout << L"ERROR: LocRes format too new!";
+			std::wcout << L"ERROR: LocRes format too new!" << std::endl;
 			return 1;
 		}
+
+		if (version == 4)
+			std::wcout << L"WARNING: LocRes version 4 is undocumented, may not work properly!" << std::endl;
 
 		const auto read_string = [&] () -> std::wstring {
 			auto length = static_cast<int64_t>(*reinterpret_cast<const int*>(buffer.data() + index));
@@ -1161,8 +1164,9 @@ int wmain(int argc, wchar_t ** argv)
 
 		for (size_t i = 0; i < namespace_count; ++i)
 		{
-			if (version == 2 || version == 3)
+			if (2 <= version)
 				index += sizeof(uint32_t);
+
 			const auto ns = read_string();
 
 			const auto key_count = *reinterpret_cast<const uint32_t*>(buffer.data() + index);
@@ -1174,7 +1178,7 @@ int wmain(int argc, wchar_t ** argv)
 
 			for (size_t j = 0; j < key_count; ++j)
 			{
-				if (version == 2 || version == 3)
+				if (2 <= version)
 					index += sizeof(uint32_t);
 
 				const auto key = read_string();
@@ -1193,6 +1197,9 @@ int wmain(int argc, wchar_t ** argv)
 				{
 					str = read_string();
 				}
+
+				if (4 <= version) // WARNING: LocRes version 4 is undocumented: https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Core/Internationalization/FTextLocalizationResourceVersion/ELocResVersion
+					index += sizeof(uint32_t);
 
 				lv.back().second.push_back(FEntry{ key, hash, str });
 			}
